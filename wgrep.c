@@ -8,6 +8,7 @@ wgrep.c : search line by line of a file for specific search term (CASE SENSITIVE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> 
+#include <sys/types.h> // used type ssize_t 
 #define BUFFER_SIZE 256 
 
 
@@ -44,6 +45,7 @@ int main(int argc, char *argv[]){
 
   }
 
+
   for(int i=2; i<argc; ++i){
     // first specified file name located at argv[2]
 
@@ -57,15 +59,26 @@ int main(int argc, char *argv[]){
       exit(1);
     }
 
+    // use getline() to read ENTIRE line from specified file 
+    char *line = NULL; 
+    char *res = NULL; 
+    size_t len = 0; 
+    ssize_t read = -1; // will hold length of line (not including '\0'), or getline() returns -1 if EOF or failure to read 
 
+    while((read = getline(&line, &len, fp)) != -1){
+      res = strstr(line, argv[1]);
 
+      if(res != NULL){
+        // term found, print ENTIRE line
 
-
-
-
+        printf("%s", line);
+        free(line); // dellocate 
+        line = NULL;
+        len = 0; 
+      }
+    }
 
   }
 
-
-  return 0; 
+  return 0; // success, return 0 
 }
