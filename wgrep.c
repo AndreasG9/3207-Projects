@@ -13,12 +13,6 @@ wgrep.c : search line by line of a file for specific search term (CASE SENSITIVE
 
 int main(int argc, char *argv[]){
 
-   puts("TEST TEST");
-
-
-
-
-
    if(argc == 1){
     // no command line arguments passed 
 
