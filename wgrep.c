@@ -78,6 +78,12 @@ int main(int argc, char *argv[]){
       }
     }
 
+    int status = fclose(fp); // close file ptr
+
+    if(status == EOF){
+      puts("error: failed to close file");
+    }
+
   }
 
   return 0; // success, return 0 
