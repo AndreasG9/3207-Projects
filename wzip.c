@@ -20,7 +20,7 @@ int main(int argc, char *argv[]){
   for(int i=1; i<argc; ++i){
 
     FILE *fp = NULL; 
-    fp = fopen(argv[i], "wb"); // FIX "wb" mode ?? 
+    fp = fopen(argv[i], "rb+"); // testing 
 
     if(fp == NULL){
       
@@ -28,13 +28,12 @@ int main(int argc, char *argv[]){
       exit(1); 
     }
 
-    unsigned int count = 1;
-    int lastChar; // can cast to (char) to get its character 
-    int currentChar; 
+    int count = 1;
+    int lastChar, currentChar, retvalCount, retvalChar; 
 
     // grab each char, if next char is equal, increment count 
     // otherwise use fwrite() to write the count and character to STDOUT
-    // reset and repeat until currentChar returns EOF 
+    // reset and repeat until currentChar returns EOF, write the count for last character 
 
     lastChar = fgetc(fp); 
     
@@ -44,32 +43,30 @@ int main(int argc, char *argv[]){
 
       if(currentChar == EOF){
         // display count and lastChar for final chracter in the file
+        // printf("%d%c", count, (char)lastChar); // test in any "r" mode
 
-        int retvalCount = fwrite(&count, sizeof(int), 1, stdout); 
-        int retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); 
+        retvalCount = fwrite(&count, sizeof(int), 1, stdout); 
+        retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); 
 
         if(retvalCount != 1 || retvalChar != 1)
-          puts("fwrite error");
+          puts("wzip: fwrite error");
 
-        //printf("TEST: count: %d\n character: %c\n", count, (char)lastChar); // test in "r" mode 
-
-        break; // exit loop 
+        break; // no more characters left to read, exit loop 
       }
       
       if(currentChar == lastChar)
         ++count; 
 
       else{
+        // printf("%d%c", count, (char)lastChar); // test in any "r" mode
 
-        int retvalCount = fwrite(&count, sizeof(int), 1, stdout); // fwrite the count  
-        int retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); // fwrite the character
+        retvalCount = fwrite(&count, sizeof(int), 1, stdout); // fwrite the count  
+        retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); // fwrite the character
 
         if(retvalCount != 1 || retvalChar != 1)
-          puts("fwrite error");
- 
-        //printf("TEST: count: %d\n character: %c\n", count, (char)lastChar); // test in "r" mode
+          puts("wzip: fwrite error");
 
-        count = 1; 
+        count = 1; // reset count 
       }
 
       lastChar = currentChar; 
