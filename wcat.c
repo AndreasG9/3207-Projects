@@ -47,8 +47,7 @@ int main(int argc, char *argv[]){
     if(status == EOF){
       puts("error: failed to close file");
     }
-
-    puts(""); // new line 
+  
  }
 
   return 0;
