@@ -41,25 +41,27 @@ int main(int argc, char *argv[]){
 
       if(retvalCharacter == 0){
         // fread should return 0 when LAST char is read from file, exit loop 
+
         break; 
       }
-      
-      // // TESTING 
-      // printf("retvalCount: %d \t retvalCharacter: %d\n", retvalCount, retvalCharacter);
-      // printf("count: %d \t character: %c\n", count, character);
-      printf("%d%c", count, character);
+
+      //printf("%d%c", count, character);
 
       if(retvalCount != 1 || retvalCharacter != 1){
         puts("wunzip: fread error");
         exit(1);
       }
 
+      for(int j=0; j<count; ++j){
+        //loop print character to count 
 
-      // loop print character to count 
-      // ADD 
+        fprintf(stdout, "%c", character); 
+      }
 
     }
-    
+
+    puts(""); // newline 
+
     int status = fclose(fp); // close file ptr
 
     if(status == EOF){
