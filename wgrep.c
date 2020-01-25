@@ -9,15 +9,13 @@ wgrep.c : search line by line of a file for specific search term (CASE SENSITIVE
 #include <stdlib.h>
 #include <string.h> 
 #include <sys/types.h> // used type ssize_t 
-#define BUFFER_SIZE 256 
-
 
 int main(int argc, char *argv[]){
 
    if(argc == 1){
     // no command line arguments passed 
 
-    puts("wgrep: searchterm[file...]");
+    puts("wgrep: searchterm [file ...]");
     exit(1);
   }
 
@@ -25,24 +23,26 @@ int main(int argc, char *argv[]){
     // no file specified, only search term passed 
     // read from stdin, store, and search for term from that location 
  
-    char term[BUFFER_SIZE]; 
+    char *line, *res = NULL;
+    size_t len = 0; 
+    ssize_t read = -1; 
   
-    printf("%s", "Type some stuff with or without specified search term : "); 
-    fgets(term, BUFFER_SIZE, stdin);
+    //printf("%s", "Type some stuff with or without specified search term: "); 
 
-    char *res = NULL; 
-    res = strstr(term, argv[1]); 
+    while((read = getline(&line, &len, stdin)) != -1){
+       res = strstr(line, argv[1]);
 
-    if(res != NULL){
-      // term found, print ENTIRE line
+      if(res != NULL){
+        // term found, print ENTIRE line
 
-      puts(term); 
+        printf("%s", line);
+        free(line);
+        line = NULL;
+        len = 0; 
+      }
     }
 
-    else{
-      puts("wgrep: term not found");
-    }
-
+    // will keep reading from stdin if manually enter input (./wgrep searchterm), ctrl-c to stop 
   }
 
 
@@ -55,13 +55,12 @@ int main(int argc, char *argv[]){
     if(fp == NULL){
       // can't open file, end running of program
 
-      puts("wrep: cannot open file");
+      puts("wgrep: cannot open file");
       exit(1);
     }
 
     // use getline() to read ENTIRE line from specified file 
-    char *line = NULL; 
-    char *res = NULL; 
+    char *line, *res = NULL; 
     size_t len = 0; 
     ssize_t read = -1; // will hold length of line (not including '\0'), or getline() returns -1 if EOF or failure to read 
 
@@ -86,5 +85,5 @@ int main(int argc, char *argv[]){
 
   }
 
-  return 0; // success, return 0 
+  return 0; 
 }
