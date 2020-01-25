@@ -13,9 +13,12 @@ int main(int argc, char *argv[]){
   if(argc == 1){
     // no file specified on command line 
     
-    puts("wzip: file1[file2...]");
+    puts("wzip: file1 [file2 ...]");
     exit(1);
   }
+
+  int count = 1; 
+  int lastChar, currentChar, retvalCount, retvalChar; 
 
   for(int i=1; i<argc; ++i){
 
@@ -28,50 +31,40 @@ int main(int argc, char *argv[]){
       exit(1); 
     }
 
-    int count = 1;
-    int lastChar, currentChar, retvalCount, retvalChar; 
-
     // grab each char, if next char is equal, increment count 
     // otherwise use fwrite() to write the count and character to STDOUT
-    // reset and repeat until currentChar returns EOF, write the count for last character 
+    // reset and repeat until currentChar returns EOF, write the count for last character if last file passed 
 
-    lastChar = fgetc(fp); 
-    
-    while(1){  
+    if(i == 1){
+      // only for first character of first file passed 
+      lastChar = fgetc(fp);
+    }
 
-      currentChar = fgetc(fp); 
+    do{
 
-      if(currentChar == EOF){
-        // display count and lastChar for final chracter in the file
-        // printf("%d%c", count, (char)lastChar); // test in any "r" mode
-
-        retvalCount = fwrite(&count, sizeof(int), 1, stdout); 
-        retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); 
-
-        if(retvalCount != 1 || retvalChar != 1)
-          puts("wzip: fwrite error");
-
-        break; // no more characters left to read, exit loop 
-      }
-      
+      currentChar = fgetc(fp);
+ 
       if(currentChar == lastChar)
-        ++count; 
+         ++count; 
 
       else{
-        // printf("%d%c", count, (char)lastChar); // test in any "r" mode
+        if((i+1) < argc){
+          // multiple files passed, dont want to print count for final character yet, cont. to next iteration in loop  
+          break; 
+        }
 
-        retvalCount = fwrite(&count, sizeof(int), 1, stdout); // fwrite the count  
-        retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout); // fwrite the character
+        retvalCount = fwrite(&count, sizeof(int), 1, stdout); 
+        retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout);
+        //lastChar = currentChar;
+        count = 1;
 
         if(retvalCount != 1 || retvalChar != 1)
-          puts("wzip: fwrite error");
+          puts("wzip: fwrite error");  
+     }
 
-        count = 1; // reset count 
-      }
-
-      lastChar = currentChar; 
-
-    }
+     lastChar = currentChar; 
+      
+    }while(currentChar != EOF);
 
     int status = fclose(fp); // close file ptr
 
