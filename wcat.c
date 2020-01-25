@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
     if(fp == NULL){
       // can't open file, end running of program
 
-      puts("wcat cannot open the file\n");
+      puts("wcat: cannot open file");
       exit(1);
     }
 
