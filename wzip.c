@@ -2,7 +2,8 @@
 Project 0
 Andreas Gagas
 
-wzip.c: .. "compress" the contents of the specified file using run-length encoding ... aaaaaaaaaabbbb --> 10a4b 
+wzip.c: .. "compress" the contents of the specified file / files using run-length encoding ... aaaaaaaaaabbbb --> 10a4b 
+if multiple files, contents compressed into single output file1: aa file2: ab --> 3a1b
 */
 
 #include <stdio.h>
@@ -18,9 +19,9 @@ int main(int argc, char *argv[]){
   }
 
   int count = 1; 
-  int lastChar, currentChar, retvalCount, retvalChar; 
+  int lastChar, currentChar, retvalCount, retvalChar, i;  
 
-  for(int i=1; i<argc; ++i){
+  for(i=1; i<argc; ++i){
 
     FILE *fp = NULL; 
     fp = fopen(argv[i], "rb+"); // testing 
@@ -55,7 +56,6 @@ int main(int argc, char *argv[]){
 
         retvalCount = fwrite(&count, sizeof(int), 1, stdout); 
         retvalChar = fwrite(&lastChar, sizeof(char), 1, stdout);
-        //lastChar = currentChar;
         count = 1;
 
         if(retvalCount != 1 || retvalChar != 1)
@@ -70,8 +70,12 @@ int main(int argc, char *argv[]){
 
     if(status == EOF){
       puts("error: failed to close file");
-    }
+    } 
   }
+  
+  // line feed character, test scripts would only work with this addition 
+  if(i > 2)
+    printf("\n");
 
   return 0; 
 }
