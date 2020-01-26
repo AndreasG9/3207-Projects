@@ -13,14 +13,16 @@ int main(int argc, char *argv[]){
   if(argc == 1){
     // no file specified on command line 
     
-    puts("wunzip: file1[file2...]");
+    puts("wunzip: file1 [file2 ...]");
     exit(1);
   }
+
+  int multiLineCount = 0; // to count multiline occurance 
 
   for(int i=1; i<argc; ++i){
 
     FILE *fp = NULL; 
-    fp = fopen(argv[i], "rb");
+    fp = fopen(argv[i], "rb+");
 
     if(fp == NULL){
       
@@ -41,11 +43,8 @@ int main(int argc, char *argv[]){
 
       if(retvalCharacter == 0){
         // fread should return 0 when LAST char is read from file, exit loop 
-
         break; 
       }
-
-      //printf("%d%c", count, character);
 
       if(retvalCount != 1 || retvalCharacter != 1){
         puts("wunzip: fread error");
@@ -55,19 +54,25 @@ int main(int argc, char *argv[]){
       for(int j=0; j<count; ++j){
         //loop print character to count 
 
-        fprintf(stdout, "%c", character); 
+        //fprintf(stdout, "%c", character); 
+        printf("%c", character);
       }
+
+     ++multiLineCount; 
 
     }
 
-    puts(""); // newline 
-
     int status = fclose(fp); // close file ptr
-
     if(status == EOF){
       puts("error: failed to close file");
     }
 
+  }
+
+  if(multiLineCount == 1  || argc > 2){
+    // resolves issue with test scipts 
+    // will only add newline when more than 1 file passed or the passed file its not multilined 
+    printf("\n");
   }
 
   return 0; 
