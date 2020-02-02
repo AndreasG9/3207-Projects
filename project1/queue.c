@@ -1,12 +1,16 @@
-// queue implementation (similar to linked-list of nodes)
+/*
+Project 1
+Andreas Gagas
+queue.c - queue implementation (linked-list of nodes) for 4 FIFO queues 
+*/
 
-#include <stdio.h>
-#include <stdlib.h>
+// struct event data fields: int id, TYPES type, int time 
 
 struct node{
-  // a node will hold the data and ref to next element in list (to right)
+  // a node will hold the data/job and ref to next node in list (to right)
 
-  int data; 
+  //int data; 
+  struct event *e; // struct event data fields: int id, TYPES type, int time 
   struct node *next; 
 };
 
@@ -14,13 +18,13 @@ typedef struct queue{
 
   int counter; // num of jobs 
   //int capacity; // when to reallocate ... DO NOT NEED
-  int status; // currently handling???? an item  1|0  ADD 
+  int status; // currently handling an item ... 1 for busy 
   struct node *front;
   struct node *rear;
 }Queue; 
 
 Queue* initQueue(){
-  // create and queue and init values to 0 (empty)
+  // create a queue and init values to 0 (empty)
 
   Queue *queue; 
   queue = malloc(sizeof(Queue));
@@ -33,39 +37,39 @@ Queue* initQueue(){
   return queue; 
 }
 
-void enqueue(Queue *queue, int value){
-  // add element to queue (append to end of list)
+void enqueue(Queue *queue, struct event *data){
+  // add node to queue (append to end of list)
 
-  struct node *element; // node to be added to queue  
-  element = malloc(sizeof(struct node));
-  element->data = value; 
-  element->next = 0; // node.next = 0 
+  struct node *n; // node to be added to queue  
+  n = malloc(sizeof(struct node));
+  n->e = data; // node will store the event data (ex. 28, SYSTEM_ARRIVAL, 15); 
+  n->next = 0; // node.next = 0 
 
   if(queue->front == 0){
-    // empty queue, add first element 
+    // empty queue, add first node/ element 
 
-    queue->front = element; 
+    queue->front = n; 
   }
 
   else{
     // prev rear element will ref the new rear element 
 
-    queue->rear->next = element; 
+    queue->rear->next = n; 
   }
 
-  queue->rear = element; // append to end, rear now ref to last element in queue 
+  queue->rear = n; // append to end, rear now ref to last element in queue 
   queue->counter = (queue->counter + 1); // increment the counter for node/element in queue 
-  //printf("counter now: %d\n", queue->counter);
 }
 
-int dequeue(Queue *queue){
+struct event* dequeue(Queue *queue){
 
   if(queue->front == 0){
     // empty queue, return 0 
     return 0; 
   }
 
-  int data = queue->front->data; // data to be returned 
+  struct event *retval; 
+  retval = queue->front->e; // data to be returned 
   struct node *remove; 
   remove = queue->front; // required to dellocate memory from removed node 
   queue->front = queue->front->next; // front will now ref second element in queue (now front of queue)
@@ -78,7 +82,7 @@ int dequeue(Queue *queue){
   queue->counter = (queue->counter - 1); // decremenent count nodes/ elements in queue 
   free(remove); 
   
-  return data; 
+  return retval; 
 }
 
 int isEmpty(Queue *queue){
@@ -90,3 +94,8 @@ int isEmpty(Queue *queue){
   else
     return 0; 
 }
+
+
+
+
+
