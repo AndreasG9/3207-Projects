@@ -2,14 +2,29 @@
 Project 1
 Andreas Gagas
 queue.c - queue implementation (linked-list of nodes) for 4 FIFO queues 
+
+priority queue not min heap, trying sorted list, no re-sorted required 
 */
 
-// struct event data fields: int id, TYPES type, int time 
+typedef enum {START_SIM, SYSTEM_ARRIVAL, CPU_START, CPU_END, SYSTEM_EXIT, 
+//                0             1             2        3        4
+DISK1_ARRIVAL, DISK1_START, DISK1_END, DISK2_ARRIVAL, DISK2_START, DISK2_END, 
+//      5            6           7          8              9           10
+NETWORK_ARRIVAL, NETWORK_START, NETWORK_END, END_SIM} TYPES;
+//      11               12           13        14
+    
+
+struct event{
+// represent an event 
+
+  int id; // unique processID (each systemArrival is counted)
+  TYPES type; // event type, defined above 
+  int time; // length of job, determined by randon num. between const min and max of type 
+};
 
 struct node{
   // a node will hold the data/job and ref to next node in list (to right)
 
-  //int data; 
   struct event *e; // struct event data fields: int id, TYPES type, int time 
   struct node *next; 
 };
@@ -17,8 +32,8 @@ struct node{
 typedef struct queue{
 
   int counter; // num of jobs 
-  //int capacity; // when to reallocate ... DO NOT NEED
-  int status; // currently handling an item ... 1 for busy 
+  //int capacity; // don't need this, each node memory is allocated
+  int status; // currently handling an item ... when event is in CPU switch to 1 for busy  
   struct node *front;
   struct node *rear;
 }Queue; 
@@ -95,7 +110,68 @@ int isEmpty(Queue *queue){
     return 0; 
 }
 
+// ==========================================Priority-Queue =====================================================================================
 
+// use struct node and struct queue 
+
+// main will pass an event and current queue 
+
+// always keepy the queue sorted by time, insertion of a new event is done easily, and popping the top event will require no further sorting 
+
+void pushPQ(Queue *queue, struct event *e){
+
+  struct node *n; // rep the event data in a node 
+  n = malloc(sizeof(struct node)); 
+  n->e = e; 
+  n->next = 0; 
+
+  struct node *traverse;  
+  traverse = malloc(sizeof(struct node)); 
+
+  int timeEvent = n->e->time; // get the TIME of event
+
+  if(queue->front == 0){
+    // empty queue 
+
+    queue->front = n; 
+  }
+
+  else if(timeEvent < queue->front->e->time){
+    // insert directly to front if shorter job time than the current front's job time 
+
+    n->next = queue->front; // new front will ref old front 
+    queue->front = n; // queue front will ref new front 
+  }
+
+  else{
+    // insert in correct location 
+    // swap is currently ref the front node, traverse the list until find the first node with a greater time (stop 1 before)
+    // insert node n in that position, list is currently sorted 
+    
+    traverse = queue->front;
+
+    while(traverse->next != 0 && traverse->next->e->time <= timeEvent){
+      traverse = traverse->next; 
+    }
+
+    n->next = traverse->next; 
+    traverse->next = n; 
+  }
+
+  queue->counter = (queue->counter + 1); // increment count for priority queue 
+}
+
+struct event* popPQ(Queue *queue){
+  // list is sorted, pop will always remove the highest priority node, no further sorting required 
+
+  struct node *n; 
+  n = malloc(sizeof(struct node));
+
+  n = queue->front; // "grab" the highest priority node 
+  queue->front = queue->front->next; // front will now ref the 2nd priority node, old 1st priority node no longer ref. 
+
+  return (n->e); // returning a ptr, can free up struct later in main 
+}
 
 
 
