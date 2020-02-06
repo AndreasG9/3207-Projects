@@ -15,9 +15,13 @@ main.c - discrete event simulator
 int random_num_between_interval(int min, int max);
 
 void handle_start_simulation(Queue *pQ); 
-void handle_end_simulation(Queue *pQ);
+int handle_end_simulation(Queue *pQ, struct event *old);
 void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old); 
-void hand_process_arrive_cpu(Queue *pQ, struct event *old);
+void handle_process_arrive_cpu(Queue *pQ, struct event *old);
+void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *disk1Q, Queue *disk2Q, struct event *old); // has the most going for it 
+void handle_process_exit_system(Queue *pQ, struct event *old); 
+void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old); 
+
 
  // global variables (for simplicity)
 int SEED, INIT_TIME, FIN_TIME, ARRIVE_MIN, ARRIVE_MAX, CPU_MIN, CPU_MAX,
@@ -26,7 +30,6 @@ double QUIT_PROB, NETWORK_PROB;
 
 int id_count; // testing this out 
 
-// 1 for T ex. SYSTEM_EXIT 0 --> FALSE
 
 // typedef enum {START_SIM, PROCESS_ARRIVAL, PROCESS_ARRIVE_CPU, PROCESS_EXIT_CPU, PROCESS_EXIT_SYSTEM, 
 // //                0             1                 2                  3                 4
@@ -35,16 +38,15 @@ int id_count; // testing this out
 // PROCESS_ARRIVE_NETWORK, PROCESS_EXIT_NETWORK, END_SIM} TYPES;
 // //     9                        10                11
 
-// struct event{
-// // represent an event 
 
-//   int id; // unique processID (each systemArrival is counted)
-//   TYPES type; // event type, defined above 
-//   int time; // length of job, determined by randon num. between const min and max of type 
-// };
+// for reference, corresponse to enum TYPES value 
+char *event_types[12] = {"start sim", "process arrival", "process arrives cpu", "process exits cpu", "process exits SYSTEM", 
+"process arrives disk1", "process exits disk1", "process arrives disk2", "process exits disk2", "process arrives network", "process exits network", 
+"end sim"}; 
+
 
 int main(int args, char *argv[]){
-  
+
   // TEMP FIX FORMAT LATER 
   // const values (make const later), generate random num between their interval
   // int SEED, INIT_TIME, FIN_TIME, ARRIVE_MIN, ARRIVE_MAX, CPU_MIN, CPU_MAX, 
@@ -83,29 +85,28 @@ int main(int args, char *argv[]){
 
   Queue *cpuQueue;
   cpuQueue = initQueue();               // ***** cpuQueue->status 1 for BUSY 0 for IDLE *****
-  //Queue *disk1Queue;
-  //disk1Queue = initQueue(); 
-  //Queue *disk2Queue;
-  //disk2Queue = initQueue();
-  //Queue *networkQueue;
-  //networkQueue = initQueue();
+  Queue *disk1Queue;
+  disk1Queue = initQueue(); 
+  Queue *disk2Queue;
+  disk2Queue = initQueue();
+  Queue *networkQueue;
+  networkQueue = initQueue();
   Queue *pQueue;
   pQueue = initQueue(); 
 
 
-  //int processIDCount = 0; // systemArrival counter for unique processID PUT IN handler 
-
-
-
   // INIT 
-  handle_start_simulation(pQueue); // push START_SIM event onto pQueue, generate first job arrival 
-  handle_end_simulation(pQueue); // push END_SIM event onto pQueue (always lowest priority)
+  handle_start_simulation(pQueue); // push START_SIM event and END_SIM onto pQueue, generate first job arrival 
   id_count = 0; 
   // START_SIM -> PROCESS_ARRIVAL -> END_SIM ... start main loop 
 
-  int i = 0; 
+  int i = 1; 
+  int control = 1; 
   // MAIN LOOP 
-  while(i<1){
+  //while(pQueue->front != 0){
+  //while(control){
+    // loop will end when top priority event is END_SIM (whose event time is equal to FIN_TIME)
+  while(i<2){
 
     // grab the top priority event 
     struct event *e; 
@@ -118,6 +119,22 @@ int main(int args, char *argv[]){
           handle_process_arrival(pQueue, cpuQueue, e); 
           break; 
         
+        case PROCESS_ARRIVE_CPU:
+          handle_process_arrive_cpu(pQueue, e);
+          break; 
+        
+        case PROCESS_EXIT_CPU:
+          handle_process_exit_cpu(pQueue, cpuQueue, networkQueue, disk1Queue, disk2Queue, e); 
+          break; 
+        
+        case PROCESS_EXIT_SYSTEM:
+          handle_process_exit_system(pQueue, e); 
+
+
+
+        case END_SIM: 
+          control = handle_end_simulation(pQueue, e); // control set to 0, exit loop 
+          break;  
 
     }
 
@@ -126,16 +143,6 @@ int main(int args, char *argv[]){
   }
 
 
-  // main loop to call handler func (use switch case to select correct event generator/handler)
-    // clock set to next event time       clock is now: ... 
-    // poll and carry out highest priority event ... 
-
-      // ************ 5 iterations a loop 
-
-    // isBusy() change status 
-
-  
-  // *********** main loop . pop event --> switch case correct event handler  
   struct node *n; 
   n = malloc(sizeof(struct node)); 
   n = pQueue->front; 
@@ -145,7 +152,9 @@ int main(int args, char *argv[]){
       printf("%d ", n->e->type);
   }
 
-  //printf("%d", pQueue->front->e->type); 
+  //printf("%d", pQueue->front->e->type);
+
+  // free(pQueue) ...  (struct nodes freed inside func calls in queue.c, and struct events freed inside handlers)
 
   return 0; 
 }
@@ -162,14 +171,20 @@ int random_num_between_interval(int min, int max){
 void handle_start_simulation(Queue *pQ){
   // will generate once 
 
-  struct event *e; 
-  e = malloc(sizeof(struct event)); 
-  e->type = START_SIM; 
-  e->time = INIT_TIME; 
-  e->id = 0; // doesn't need an id, prob. delete  
+  struct event *start; 
+  start = malloc(sizeof(struct event)); 
+  start->type = START_SIM; 
+  start->time = INIT_TIME; 
+  start->id = 0; // doesn't need an id, prob. delete  
 
-  // ADD TO PRIORITY QUEUE ... THIS IS FIRST EVENT 
-  pushPQ(pQ, e);
+  struct event *end;
+  end = malloc(sizeof(struct event)); 
+  end->type = END_SIM; 
+  end->time = FIN_TIME; 
+  end->id = 0; // doesnt need an id, prob. delete
+
+  pushPQ(pQ, start); // THIS IS FIRST EVENT 
+  pushPQ(pQ, end);  // ADD TO PRIORITY QUEUE ... SHOULD BE BOTTOM THROUGHOUT 
 
   struct event *new; 
   new = malloc(sizeof(struct event)); 
@@ -179,23 +194,27 @@ void handle_start_simulation(Queue *pQ){
 
   // ADD first job arrival (time 0) to queue, get the loop going ... 
   pushPQ(pQ, new); 
+
 }
 
-void handle_end_simulation(Queue *pQ){
+int handle_end_simulation(Queue *pQ, struct event *old){
+  // end the simulation b/c old->time == FIN_TIME
   
-  struct event *e;
-  e = malloc(sizeof(struct event)); 
-  e->type = END_SIM; 
-  e->time = FIN_TIME; 
-  e->id = 0; // doesnt need an id, prob. delete
+  // just simply exits the loop then ....
+  return 0; 
 
-  // ADD TO PRIORITY QUEUE ... SHOULD BE BOTTOM THROUGHOUT 
-  pushPQ(pQ, e); 
+  // struct event *e;
+  // e = malloc(sizeof(struct event)); 
+  // e->type = END_SIM; 
+  // e->time = FIN_TIME; 
+  // e->id = 0; // doesnt need an id, prob. delete
+
+  // // ADD TO PRIORITY QUEUE ... SHOULD BE BOTTOM THROUGHOUT 
+  // pushPQ(pQ, e); 
 }
 
 void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
   // will generate itself 
-
 
   if(cpuQueue->status == 1 || (cpuQueue->counter >0)){
     // if CPU is busy, or the cpuQueue is non-empty, add process to queue  
@@ -208,8 +227,9 @@ void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
     struct event *next; 
     next = malloc(sizeof(struct event));
     next->type = PROCESS_ARRIVE_CPU;
-    next->id = id_count; // id_count is still old event id
-    next->time = old->time; 
+    //next->id = id_count; // id_count is still old event id
+    next->id = old->id; 
+    next->time = old->time; // same time 
 
     cpuQueue->status = 1; // CPU NOW BUSY 
   }
@@ -225,13 +245,144 @@ void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
   new->time = old->time + num; // new event time 
 
   pushPQ(pQ, new); // add to PQ 
+
+  // case to free up old event, but if enqueued 
+  // free(old) 
 }
 
-void hand_process_arrive_cpu(Queue *pQ, struct event *old){
+void handle_process_arrive_cpu(Queue *pQ, struct event *old){
   // will generate PROCESS_FINISH_CPU event 
 
   int num = random_num_between_interval(CPU_MIN, CPU_MAX); 
+  struct event *new; 
+  new = malloc(sizeof(struct event)); 
+  new->type = PROCESS_EXIT_CPU;  
+  new->id = old->id; 
+  new->time = old->time + num; // new event time 
 
+  // free(old); 
+}
+
+void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *disk1Q, Queue *disk2Q, struct event *old){
+  // will generate PROCESS_EXIT_SYSTEM
+
+  double random = random_num_between_interval(0, 1); // random double between [0-1]
+
+  if(random < QUIT_PROB){
+    // generate PROCESS_EXIT_SYSTEM event 
+
+    struct event *new_exit; 
+    new_exit = malloc(sizeof(struct event)); 
+    new_exit->type = PROCESS_EXIT_SYSTEM;
+    new_exit->id = old->id; 
+    new_exit->time = old->time; // // exits happens right away ?? 
+    pushPQ(pQ, new_exit); // will just free up struct event old 
+  }
+
+  else if(random < NETWORK_PROB){
+    // go to Network instead of disk 
+
+    if(networkQ->status == 0 && networkQ->counter == 0){
+      // Network is idle AND Network queue is empty 
+      // generate PROCESS_ARRIVE_NETWORK event 
+
+      int num = random_num_between_interval(NETWORK_MIN, NETWORK_MAX); 
+
+      struct event *new_arrival; 
+      new_arrival = malloc(sizeof(struct event)); 
+      new_arrival->type = PROCESS_ARRIVE_NETWORK; 
+      new_arrival->id = old->id; 
+     // new_arrival->time = old->time;
+      new_arrival->time = old->time + num; 
+
+      pushPQ(pQ, new_arrival); 
+    }
+
+    else{
+      // Network is busy || Network queue is non-empty ...  add to networkQeueue 
+
+      enqueue(networkQ, old); 
+    }
+  }
+
+  // GO TO DISK DIRECTLY 
+  else if(disk1Q->status == 0 && disk1Q->counter == 0){
+     // disk queue is empty and disk is idle .. generate new event 
+    
+    int num = random_num_between_interval(DISK1_MIN, DISK1_MAX); 
+
+    struct event *new_arrival;
+    new_arrival = malloc(sizeof(struct event));
+    new_arrival->type = PROCESS_ARRIVE_DISK1; 
+    new_arrival->id = old->id; 
+    new_arrival->time = old->time + num; 
+
+    pushPQ(pQ, new_arrival); 
+    disk1Q->status = 1; 
+  }
+
+  else if(disk2Q->status == 0 && disk2Q->counter == 0){
+    // disk queue is empty and disk is idle .. generate new event 
+    
+    int num = random_num_between_interval(DISK2_MIN, DISK2_MAX); 
+
+    struct event *new_arrival;
+    new_arrival = malloc(sizeof(struct event));
+    new_arrival->type = PROCESS_ARRIVE_DISK2; 
+    new_arrival->id = old->id; 
+    new_arrival->time = old->time + num; 
+
+    pushPQ(pQ, new_arrival); 
+    disk2Q->status = 1; 
+  }
+
+  else{
+    // push old event to SMALLER disk queue 
+
+    if(disk1Q->counter > disk2Q->counter)
+      enqueue(disk2Q, old); 
+
+    else if(disk1Q->counter == disk2Q->counter){
+      // queues are equal in size, generate a random num to pick a queue 
+
+      int num = random_num_between_interval(1, 10); 
+
+      if(num > 5)
+        enqueue(disk2Q, old); 
+      else
+        enqueue(disk1Q, old); 
+    }
+
+    else
+      enqueue(disk1Q, old); 
+  }
+
+  // AT THIS POINT the old event (PROCESS_EXIT_CPU) is handled, the CPU IS NOW OPEN TO THOSE IN CPUQUEUE 
+
+  // ****** do this for other end events (eliminate the need to create a new event type) ***********
+  if(cpuQ->counter > 0){
+
+    struct event *new; 
+    new = malloc(sizeof(struct event)); 
+    new = dequeue(cpuQ); 
+    new->type = PROCESS_ARRIVE_CPU; // change type from PROCESS_ARRIVAL to ... 
+    // id is the same
+    new->time = old->time; 
+    pushPQ(pQ, new); 
+
+    cpuQ->status = 1; // busy 
+  }
+
+  // free(old) but only if not on queue FIX LATER 
+}
+
+void handle_process_exit_system(Queue *pQ, struct event *old){
+  // free old struct event, dont generate any new events 
+
+  free(old);
+}
+
+void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old){
 
 
 }
