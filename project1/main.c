@@ -4,6 +4,10 @@ Andreas Gagas
 main.c - discrete event simulator 
 */
 
+
+// AT END, have 0 memory leaks (free all Queues, nodes freed when dequeued / popped, free all old events as new the new event is generated, UNLESS QUEUED) ****
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "queue.c" // queue implementation as linkedlist of nodes ... 
@@ -11,9 +15,10 @@ main.c - discrete event simulator
 // functions for queue: Queue* initQueue(), void enqueue(Queue *queue, struct event *data), struct event* dequeue(Queue *queue), int isEmpty(Queue *queue)
 // functions for priortiy queue: pushPQ(Queue *queue, struct event *e), struct event* popPQ(Queue *queue, struct event *e)
 
-//void readConfigFile(); // const values based on thoses read from the configuration file 
+void read_config_file();
 int random_num_between_interval(int min, int max);
 
+void init_simulation(Queue *pQ); 
 void handle_start_simulation(Queue *pQ); 
 int handle_end_simulation(Queue *pQ, struct event *old);
 void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old); 
@@ -21,7 +26,6 @@ void handle_process_arrive_cpu(Queue *pQ, struct event *old);
 void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *disk1Q, Queue *disk2Q, struct event *old); // has the most going for it 
 void handle_process_exit_system(Queue *pQ, struct event *old); 
 void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old); 
-
 
  // global variables (for simplicity)
 int SEED, INIT_TIME, FIN_TIME, ARRIVE_MIN, ARRIVE_MAX, CPU_MIN, CPU_MAX,
@@ -39,7 +43,7 @@ int id_count; // testing this out
 // //     9                        10                11
 
 
-// for reference, corresponse to enum TYPES value 
+// for reference, corresponds to enum TYPES value 
 char *event_types[12] = {"start sim", "process arrival", "process arrives cpu", "process exits cpu", "process exits SYSTEM", 
 "process arrives disk1", "process exits disk1", "process arrives disk2", "process exits disk2", "process arrives network", "process exits network", 
 "end sim"}; 
@@ -47,44 +51,12 @@ char *event_types[12] = {"start sim", "process arrival", "process arrives cpu", 
 
 int main(int args, char *argv[]){
 
-  // TEMP FIX FORMAT LATER 
-  // const values (make const later), generate random num between their interval
-  // int SEED, INIT_TIME, FIN_TIME, ARRIVE_MIN, ARRIVE_MAX, CPU_MIN, CPU_MAX, 
-  // DISK1_MIN, DISK1_MAX, DISK2_MIN, DISK2_MAX,NETWORK_MIN, NETWORK_MAX; 
-  // double QUIT_PROB, NETWORK_PROB; 
-
-  FILE *fptr = NULL;
-  fptr = fopen("CONFIG1.conf", "r"); // change to command line input later 
-
-  if(fptr == NULL)
-    puts("main.c: could not open file");
-  
-  // read the int value from file (follows this format), store in corresponding event variable 
-  fscanf(fptr, "%*s %d", &SEED);
-  fscanf(fptr, "%*s %d", &INIT_TIME);
-  fscanf(fptr, "%*s %d", &FIN_TIME);
-  fscanf(fptr, "%*s %d", &ARRIVE_MIN);
-  fscanf(fptr, "%*s %d", &ARRIVE_MAX);
-  fscanf(fptr, "%*s %lf", &QUIT_PROB);
-  fscanf(fptr, "%*s %lf", &NETWORK_PROB);
-  fscanf(fptr, "%*s %d", &CPU_MIN);
-  fscanf(fptr, "%*s %d", &CPU_MAX);
-  fscanf(fptr, "%*s %d", &DISK1_MIN);
-  fscanf(fptr, "%*s %d", &DISK1_MAX);
-  fscanf(fptr, "%*s %d", &DISK2_MIN);
-  fscanf(fptr, "%*s %d", &DISK2_MAX);
-  fscanf(fptr, "%*s %d", &NETWORK_MIN);
-  fscanf(fptr, "%*s %d", &NETWORK_MAX);
-
-  // printf("%d\n", FIN_TIME); 
-
-  fclose(fptr);
-
+  read_config_file(); // const values (in name) based on thoses read from the configuration file 
   srand(SEED); // seed is from config file 
 
-
+  // INIT 
   Queue *cpuQueue;
-  cpuQueue = initQueue();               // ***** cpuQueue->status 1 for BUSY 0 for IDLE *****
+  cpuQueue = initQueue();               
   Queue *disk1Queue;
   disk1Queue = initQueue(); 
   Queue *disk2Queue;
@@ -94,11 +66,9 @@ int main(int args, char *argv[]){
   Queue *pQueue;
   pQueue = initQueue(); 
 
-
-  // INIT 
-  handle_start_simulation(pQueue); // push START_SIM event and END_SIM onto pQueue, generate first job arrival 
+  init_simulation(pQueue); // push START_SIM event and END_SIM onto pQueue, when START_SIM popped, generate FIRST process arrival 
   id_count = 0; 
-  // START_SIM -> PROCESS_ARRIVAL -> END_SIM ... start main loop 
+
 
   int i = 1; 
   int control = 1; 
@@ -106,7 +76,7 @@ int main(int args, char *argv[]){
   //while(pQueue->front != 0){
   //while(control){
     // loop will end when top priority event is END_SIM (whose event time is equal to FIN_TIME)
-  while(i<2){
+  while(i<3){
 
     // grab the top priority event 
     struct event *e; 
@@ -115,7 +85,13 @@ int main(int args, char *argv[]){
 
     switch(e->type)
     {
+        case START_SIM:
+          //printf("\nSTART_SIM PULLED\n"); 
+          handle_start_simulation(pQueue); // called once, will generate first PROCESS_ARRIVAL
+          break; 
+
         case PROCESS_ARRIVAL:
+        puts("HANDLE PROCESS ARRIVAL POPPED"); 
           handle_process_arrival(pQueue, cpuQueue, e); 
           break; 
         
@@ -156,7 +132,46 @@ int main(int args, char *argv[]){
 
   // free(pQueue) ...  (struct nodes freed inside func calls in queue.c, and struct events freed inside handlers)
 
+  // TESTING 
+  struct event *e; 
+  e = malloc(sizeof(struct event));
+  e->type = PROCESS_ARRIVE_CPU;
+  e->id = 50;
+  e->time = 40; 
+
+  handle_process_exit_cpu(pQueue, cpuQueue, networkQueue, disk1Queue, disk2Queue, e); 
+
   return 0; 
+}
+
+void read_config_file(){
+  
+  FILE *fptr = NULL;
+  fptr = fopen("CONFIG1.conf", "r"); // change to command line input later 
+
+  if(fptr == NULL)
+    puts("main.c: could not open file");
+  
+  // read the int value from file (follows this format), store in corresponding event variable 
+  fscanf(fptr, "%*s %d", &SEED);
+  fscanf(fptr, "%*s %d", &INIT_TIME);
+  fscanf(fptr, "%*s %d", &FIN_TIME);
+  fscanf(fptr, "%*s %d", &ARRIVE_MIN);
+  fscanf(fptr, "%*s %d", &ARRIVE_MAX);
+  fscanf(fptr, "%*s %lf", &QUIT_PROB);
+  fscanf(fptr, "%*s %lf", &NETWORK_PROB);
+  fscanf(fptr, "%*s %d", &CPU_MIN);
+  fscanf(fptr, "%*s %d", &CPU_MAX);
+  fscanf(fptr, "%*s %d", &DISK1_MIN);
+  fscanf(fptr, "%*s %d", &DISK1_MAX);
+  fscanf(fptr, "%*s %d", &DISK2_MIN);
+  fscanf(fptr, "%*s %d", &DISK2_MAX);
+  fscanf(fptr, "%*s %d", &NETWORK_MIN);
+  fscanf(fptr, "%*s %d", &NETWORK_MAX);
+
+  // printf("%d\n", FIN_TIME); 
+
+  fclose(fptr);
 }
 
 int random_num_between_interval(int min, int max){
@@ -167,9 +182,9 @@ int random_num_between_interval(int min, int max){
 // START_SIM, SYSTEM_ARRIVAL, CPU_START, CPU_END, SYSTEM_EXIT, DISK1_ARRIVAL, DISK1_END, DISK2_ARRIVAL, DISK2_END, NETWORK_ARRIVAL, 
 // NETWORK_END, END_SIM
 
-
-void handle_start_simulation(Queue *pQ){
-  // will generate once 
+void init_simulation(Queue *pQ){
+  // push START_SIM and FIN_TIME onto pQueue
+  // START_SIM will be the first event popped 
 
   struct event *start; 
   start = malloc(sizeof(struct event)); 
@@ -185,16 +200,19 @@ void handle_start_simulation(Queue *pQ){
 
   pushPQ(pQ, start); // THIS IS FIRST EVENT 
   pushPQ(pQ, end);  // ADD TO PRIORITY QUEUE ... SHOULD BE BOTTOM THROUGHOUT 
+}
+
+void handle_start_simulation(Queue *pQ){
+  // will generate once, popping the START_SIM event will generate a PROCESS_ARRIVAL, thus starting the sim 
 
   struct event *new; 
   new = malloc(sizeof(struct event)); 
   new->type = PROCESS_ARRIVAL; 
-  new->time = id_count;  // 0  
-  new->id = 1;  
+  new->time = INIT_TIME; // 0  
+  new->id = id_count; // 0 
 
   // ADD first job arrival (time 0) to queue, get the loop going ... 
   pushPQ(pQ, new); 
-
 }
 
 int handle_end_simulation(Queue *pQ, struct event *old){
@@ -216,13 +234,17 @@ int handle_end_simulation(Queue *pQ, struct event *old){
 void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
   // will generate itself 
 
-  if(cpuQueue->status == 1 || (cpuQueue->counter >0)){
+  int dont_free = 0; 
+
+  if(cpuQueue->status == 1 || (cpuQueue->counter > 0)){
     // if CPU is busy, or the cpuQueue is non-empty, add process to queue  
 
     enqueue(cpuQueue, old); 
+    dont_free = 1; // dont free the old event 
   }
   else if(cpuQueue->status == 0 && cpuQueue->counter == 0){
     // no cpuQueue required, generate NEXT event (PROCESS_ARRIVE_CPU)
+    printf("\nNO QUEUE\n"); 
 
     struct event *next; 
     next = malloc(sizeof(struct event));
@@ -242,12 +264,14 @@ void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
   new = malloc(sizeof(struct event)); 
   new->type = PROCESS_ARRIVAL; 
   new->id = id_count; 
+  printf("\nNEW PROCESS_ARRIVAL ID: %d\n", id_count); 
   new->time = old->time + num; // new event time 
 
   pushPQ(pQ, new); // add to PQ 
 
-  // case to free up old event, but if enqueued 
-  // free(old) 
+  // case to free up old event, but if NOT IN QUEUE 
+  if(dont_free == 0)
+    free(old); 
 }
 
 void handle_process_arrive_cpu(Queue *pQ, struct event *old){
@@ -383,7 +407,14 @@ void handle_process_exit_system(Queue *pQ, struct event *old){
 }
 
 void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old){
+// generate  
 
+  int num = random_num_between_interval(DISK1_MIN, DISK1_MAX); 
+  struct event *new; 
+  new = malloc(sizeof(struct event)); 
+  new->type = PROCESS_EXIT_CPU;  
+  new->id = old->id; 
+  new->time = old->time + num; // new event time 
 
 }
 
