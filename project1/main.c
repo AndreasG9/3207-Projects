@@ -47,10 +47,10 @@ int id_count; // testing this out
 // //     9                        10                11
 
 
-// for reference, corresponds to enum TYPES value 
-char *event_types[12] = {"simulations starts", "arrives", "arrives at cpu", " exits the cpu", "exits the SYSTEM", 
+// for reference, corresponds to enum TYPES value ... ex. printf("%s", event_types[PROCESS_EXIT_DISK2])) --> "exits the disk2"
+char *event_types[12] = {"simulations STARTS", "arrival", "arrives at cpu", "exits the cpu", "exits the SYSTEM", 
 "arrives at disk1", "exits the disk1", "arrives at disk2", "exits the disk2", "arrives at network", "exits the network", 
-"simulation"}; 
+"simulation ENDS"}; 
 
 
 int main(int args, char *argv[]){
@@ -78,9 +78,9 @@ int main(int args, char *argv[]){
   int control = 1; 
   // MAIN LOOP 
   //while(pQueue->front != 0){
- // while(control){
+ while(control){
     // loop will end when top priority event is END_SIM (whose event time is equal to FIN_TIME)
-  while(i<5){
+  // while(i<5){
 
     // grab the top priority event 
     struct event *current; 
@@ -249,6 +249,7 @@ void handle_start_simulation(Queue *pQ, struct event *old){
 int handle_end_simulation(Queue *pQ, struct event *old){
   // end the simulation b/c old->time == FIN_TIME
 
+  printf("At time %d, %s.\n", old->time, event_types[old->type]);
   // finish writing to log
   // write final stat to STAT 
   // close file ptrs 
@@ -310,7 +311,7 @@ void handle_process_arrival(Queue *pQ, Queue *cpuQueue, struct event *old){
 void handle_process_arrive_cpu(Queue *pQ, struct event *old){
   // will generate PROCESS_EXIT_CPU event 
 
-  printf("At time %d, process %d, %s\n", old->time, old->id, event_types[old->type]); 
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]); 
 
   int num = random_num_between_interval(CPU_MIN, CPU_MAX); 
 
@@ -325,9 +326,9 @@ void handle_process_arrive_cpu(Queue *pQ, struct event *old){
 }
 
 void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *disk1Q, Queue *disk2Q, struct event *old){
-  // will generate PROCESS_EXIT_SYSTEM
+  // will generate PROCESS_EXIT_SYSTEM, or arrival to a disk or network 
 
-  printf("At time %d, process %d, %s\n", old->time, old->id, event_types[old->type]); 
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]); 
 
   cpuQ->status = 0; // CPU now idle 
   int dont_free = 0; // free old event is NOT IN QUEUE 
@@ -342,8 +343,8 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
     new_exit_system->type = PROCESS_EXIT_SYSTEM;
     new_exit_system->id = old->id; 
     new_exit_system->time = old->time; // same time 
+
     pushPQ(pQ, new_exit_system);
-    
   }
 
   else if((random_num_between_interval(0,1)) < NETWORK_PROB){
@@ -353,13 +354,14 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
       // Network is idle AND Network queue is empty 
       // generate PROCESS_ARRIVE_NETWORK event 
 
-      int num = random_num_between_interval(NETWORK_MIN, NETWORK_MAX); 
+      //int num = random_num_between_interval(NETWORK_MIN, NETWORK_MAX); 
 
       struct event *new_arrive_network; 
       new_arrive_network = malloc(sizeof(struct event)); 
       new_arrive_network->type = PROCESS_ARRIVE_NETWORK; 
       new_arrive_network->id = old->id; 
-      new_arrive_network->time = old->time + num; 
+      //new_arrive_network->time = old->time + num; 
+      new_arrive_network->time = old->time; // right away 
 
       pushPQ(pQ, new_arrive_network); 
       networkQ->status = 1; // Network BUSY 
@@ -369,7 +371,7 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
       // Network is busy || Network queue is non-empty ...  add to networkQeueue 
 
       enqueue(networkQ, old); 
-      dont_free = 1; 
+      dont_free = 1;  
     }
   }
 
@@ -377,13 +379,14 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
   else if(disk1Q->status == 0 && disk1Q->counter == 0){
      // disk queue is empty and disk is idle .. generate new event 
     
-    int num = random_num_between_interval(DISK1_MIN, DISK1_MAX); 
+    //int num = random_num_between_interval(DISK1_MIN, DISK1_MAX); 
 
     struct event *new_arrive_disk1;
     new_arrive_disk1 = malloc(sizeof(struct event));
     new_arrive_disk1->type = PROCESS_ARRIVE_DISK1; 
     new_arrive_disk1->id = old->id; 
-    new_arrive_disk1->time = old->time + num; 
+    //new_arrive_disk1->time = old->time + num; 
+    new_arrive_disk1->time = old->time; // same time 
 
     pushPQ(pQ, new_arrive_disk1); 
     disk1Q->status = 1; // Disk1 BUSY 
@@ -392,13 +395,14 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
   else if(disk2Q->status == 0 && disk2Q->counter == 0){
     // disk queue is empty and disk is idle .. generate new event 
     
-    int num = random_num_between_interval(DISK2_MIN, DISK2_MAX); 
+    //int num = random_num_between_interval(DISK2_MIN, DISK2_MAX); 
 
     struct event *new_arrive_disk2;
     new_arrive_disk2 = malloc(sizeof(struct event));
     new_arrive_disk2->type = PROCESS_ARRIVE_DISK2; 
     new_arrive_disk2->id = old->id; 
-    new_arrive_disk2->time = old->time + num; 
+   // new_arrive_disk2->time = old->time + num; 
+   new_arrive_disk2->time = old->time; 
 
     pushPQ(pQ, new_arrive_disk2); 
     disk2Q->status = 1; // Disk2 BUSY 
@@ -452,12 +456,15 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
 void handle_process_exit_system(Queue *pQ, struct event *old){
   // free old struct event, dont generate any new events 
 
-  printf("PROCESS TYPE: %d ID: %d has LEFT SYSTEM\n", old->id, old->type); 
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
+
   free(old);
 }
 
 void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old){
 // generate PROCESS_EXIT_DISK1 event
+
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
 
   int num = random_num_between_interval(DISK1_MIN, DISK1_MAX); 
 
@@ -473,6 +480,8 @@ void handle_process_arrive_disk1(Queue *pQ, Queue *disk1Q, struct event *old){
 
 void handle_process_exit_disk1(Queue *pQ, Queue *cpuQ, Queue *disk1Q, struct event *old){
 // back to start (CPU or queue), handle who uses disk1 next 
+
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
 
   disk1Q->status = 0; // disk1 now idle 
   int dont_free = 0; 
@@ -518,6 +527,8 @@ void handle_process_exit_disk1(Queue *pQ, Queue *cpuQ, Queue *disk1Q, struct eve
 void handle_process_arrive_disk2(Queue *pQ, Queue *disk2Q, struct event *old){
 // generate PROCESS_EXIT_DISK2 event
 
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
+
   int num = random_num_between_interval(DISK2_MIN, DISK2_MAX); 
 
   struct event *new_arrive_disk2; 
@@ -532,6 +543,8 @@ void handle_process_arrive_disk2(Queue *pQ, Queue *disk2Q, struct event *old){
 
 void handle_process_exit_disk2(Queue *pQ, Queue *cpuQ, Queue *disk2Q, struct event *old){
 // back to start (CPU or queue), handle who uses disk2 next 
+
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
 
   disk2Q->status = 0; // disk1 now idle 
   int dont_free = 0; 
@@ -556,16 +569,17 @@ void handle_process_exit_disk2(Queue *pQ, Queue *cpuQ, Queue *disk2Q, struct eve
     cpuQ->status = 1; 
   }
 
-  // DISK1
+  // DISK2
   if(disk2Q->counter > 0){
     // disk1Q non-empty 
 
     struct event *new_arrival_disk2; 
     new_arrival_disk2 = malloc(sizeof(struct event));
     new_arrival_disk2 = dequeue(disk2Q); 
-    // time
+    // // time
 
-    pushPQ(pQ, new_arrival_disk2);
+    // pushPQ(pQ, new_arrival_disk2);
+    enqueue(disk2Q, new_arrival_disk2); 
     disk2Q->status = 1; 
   }
 
@@ -575,6 +589,8 @@ void handle_process_exit_disk2(Queue *pQ, Queue *cpuQ, Queue *disk2Q, struct eve
 
 void handle_process_arrive_network(Queue *pQ, Queue *networkQ, struct event *old){
   // generate PROCESS_EXIT_NETWORK event 
+
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
 
   int num = random_num_between_interval(NETWORK_MIN, NETWORK_MAX); 
 
@@ -590,6 +606,8 @@ void handle_process_arrive_network(Queue *pQ, Queue *networkQ, struct event *old
 
 void handle_process_exit_network(Queue *pQ, Queue *cpuQ, Queue *networkQ, struct event *old){
   // back to start (CPU or queue), handle who uses network next 
+
+  printf("At time %d, process %d, %s.\n", old->time, old->id, event_types[old->type]);
 
   networkQ->status = 0; // network IDLE 
   int dont_free = 0; 
