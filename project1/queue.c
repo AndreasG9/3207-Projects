@@ -2,17 +2,25 @@
 Project 1
 Andreas Gagas
 queue.c - queue implementation (linked-list of nodes) for 4 FIFO queues 
-
-priority queue not min heap, trying sorted list, no re-sorted required 
+priority queue implementation (sorted list), no re-sorted required after push / pop an event 
 */
 
-typedef enum {START_SIM, SYSTEM_ARRIVAL, CPU_START, CPU_END, SYSTEM_EXIT, 
-//                0             1             2        3        4
-DISK1_ARRIVAL, DISK1_START, DISK1_END, DISK2_ARRIVAL, DISK2_START, DISK2_END, 
-//      5            6           7          8              9           10
-NETWORK_ARRIVAL, NETWORK_START, NETWORK_END, END_SIM} TYPES;
-//      11               12           13        14
-    
+// typedef enum {START_SIM, SYSTEM_ARRIVAL, CPU_START, CPU_END, SYSTEM_EXIT, 
+// //                0             1             2        3        4
+// DISK1_ARRIVAL, DISK1_START, DISK1_END, DISK2_ARRIVAL, DISK2_START, DISK2_END, 
+// //      5            6           7          8              9           10
+// NETWORK_ARRIVAL, NETWORK_START, NETWORK_END, END_SIM} TYPES;
+// //      11               12           13        14
+
+// dont need DISK1_ARRIVAL, DISK2_ARRIVAL, NETWORK_ARRIVAL 
+
+typedef enum {START_SIM, PROCESS_ARRIVAL, PROCESS_ARRIVE_CPU, PROCESS_EXIT_CPU, PROCESS_EXIT_SYSTEM, 
+//                0             1                 2                  3                 4
+PROCESS_ARRIVE_DISK1, PROCESS_EXIT_DISK1, PROCESS_ARRIVE_DISK2, PROCESS_EXIT_DISK2,
+//      5                       6                 7                      8                        
+PROCESS_ARRIVE_NETWORK, PROCESS_EXIT_NETWORK, END_SIM} TYPES;
+//     9                        10               11
+
 
 struct event{
 // represent an event 
@@ -35,7 +43,7 @@ typedef struct queue{
   //int capacity; // don't need this, each node memory is allocated
   int status; // currently handling an item ... when event is in CPU switch to 1 for busy  
   struct node *front;
-  struct node *rear;
+  struct node *rear; 
 }Queue; 
 
 Queue* initQueue(){
@@ -169,6 +177,8 @@ struct event* popPQ(Queue *queue){
 
   n = queue->front; // "grab" the highest priority node 
   queue->front = queue->front->next; // front will now ref the 2nd priority node, old 1st priority node no longer ref. 
+
+  queue->counter = (queue->counter - 1); // decrement pQueue count 
 
   return (n->e); // returning a ptr, can free up struct later in main 
 }
