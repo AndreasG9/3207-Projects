@@ -1,0 +1,66 @@
+run#1 
+SEED 126
+INIT_TIME 0  
+FIN_TIME 1000
+ARRIVE_MIN 20  
+ARRIVE_MAX 80
+QUIT_PROB .2
+NETWORK_PROB .5
+CPU_MIN 5
+CPU_MAX 50
+DISK1_MIN 50
+DISK1_MAX 200 
+DISK2_MIN 50
+DISK2_MAX 200 
+NETWORK_MIN 300
+NETWORK_MAX 500
+
+All reasonable values to expect in a simulation, the low [5-50] of the CPU results in the lowest reponse times, and the lowest Max reponse time. This is expected 
+as the CPU is responsible for executing instructions at incomprehensible speeds. Also, every state of the process must (in this simulation) enter the CPU, resutling a higher
+utilization rate. The network is also noted to have a high utilization rate, but that is mainly attributed to its slow reponse times, and handles a significantly less amount of 
+events than the CPU. 
+
+run#2 
+SEED 800
+INIT_TIME 0  
+FIN_TIME 1000
+ARRIVE_MIN 20  
+ARRIVE_MAX 80
+QUIT_PROB .2
+NETWORK_PROB .5
+CPU_MIN 5
+CPU_MAX 50
+DISK1_MIN 50
+DISK1_MAX 200 
+DISK2_MIN 50
+DISK2_MAX 200 
+NETWORK_MIN 300
+NETWORK_MAX 500
+
+I run the same const, but adjusted the SEED, to get different random values to assist in generating new event times. 
+The utilization rates are only a few decimal places apart. Ex. CPU util .77 vs .79, Disk2 util .28 vs .29 ... 
+The results are agood indicator for consistency in your program. 
+
+
+run#3 
+SEED 40
+INIT_TIME 0  
+FIN_TIME 10000
+ARRIVE_MIN 20  
+ARRIVE_MAX 25
+QUIT_PROB .2
+NETWORK_PROB .5
+CPU_MIN 5
+CPU_MAX 50
+DISK1_MIN 50
+DISK1_MAX 200 
+DISK2_MIN 50
+DISK2_MAX 200 
+NETWORK_MIN 300
+NETWORK_MAX 500
+
+I decided to set the ARRIVE_MIN and ARRIVE_MIN const low and close to eachother(20, 25), just to test an extreme. 
+As expected, the CPU queue's average and MAX size had a drastic increase as the process_arrive events were generated rapidly, and in general its handling of processes
+increased. 
+
+
