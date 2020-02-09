@@ -1,0 +1,1147 @@
+SEED 126
+INIT_TIME 0
+FIN_TIME 10000
+ARRIVE_MIN 20
+ARRIVE_MAX 80
+QUIT_PROB 0.200000
+NETWORK_PROB 0.500000
+CPU_MIN 5
+CPU_MAX 50
+DISK1_MIN 50
+DISK1_MAX 200
+DISK2_MIN 50
+DISK2_MAX 200
+NETWORK_MIN 300
+NETWORK_MAX 500
+At time 0, simulations STARTS.
+At time 0, process 0, arrival.
+At time 0, process 0, arrives at cpu.
+At time 28, process 1, arrival.
+At time 31, process 0, exits the cpu.
+At time 31, process 0, exits the SYSTEM.
+At time 31, process 1, arrives at cpu.
+At time 76, process 2, arrival.
+At time 77, process 1, exits the cpu.
+At time 77, process 1, arrives at disk1.
+At time 77, process 2, arrives at cpu.
+At time 96, process 3, arrival.
+At time 126, process 2, exits the cpu.
+At time 126, process 2, exits the SYSTEM.
+At time 126, process 3, arrives at cpu.
+At time 172, process 3, exits the cpu.
+At time 172, process 3, arrives at disk2.
+At time 174, process 4, arrival.
+At time 174, process 4, arrives at cpu.
+At time 198, process 1, exits the disk1.
+At time 209, process 5, arrival.
+At time 216, process 4, exits the cpu.
+At time 216, process 4, exits the SYSTEM.
+At time 216, process 1, arrives at cpu.
+At time 223, process 3, exits the disk2.
+At time 227, process 1, exits the cpu.
+At time 227, process 1, exits the SYSTEM.
+At time 227, process 5, arrives at cpu.
+At time 229, process 6, arrival.
+At time 271, process 5, exits the cpu.
+At time 271, process 5, arrives at disk1.
+At time 271, process 3, arrives at cpu.
+At time 288, process 7, arrival.
+At time 315, process 3, exits the cpu.
+At time 315, process 3, arrives at network.
+At time 315, process 6, arrives at cpu.
+At time 323, process 8, arrival.
+At time 335, process 6, exits the cpu.
+At time 335, process 6, exits the SYSTEM.
+At time 335, process 7, arrives at cpu.
+At time 344, process 7, exits the cpu.
+At time 344, process 7, exits the SYSTEM.
+At time 344, process 8, arrives at cpu.
+At time 373, process 8, exits the cpu.
+At time 373, process 8, exits the SYSTEM.
+At time 396, process 9, arrival.
+At time 396, process 9, arrives at cpu.
+At time 423, process 9, exits the cpu.
+At time 423, process 9, arrives at disk2.
+At time 433, process 5, exits the disk1.
+At time 433, process 5, arrives at cpu.
+At time 436, process 10, arrival.
+At time 450, process 5, exits the cpu.
+At time 450, process 10, arrives at cpu.
+At time 478, process 10, exits the cpu.
+At time 479, process 11, arrival.
+At time 479, process 11, arrives at cpu.
+At time 503, process 11, exits the cpu.
+At time 503, process 11, arrives at disk1.
+At time 504, process 12, arrival.
+At time 504, process 12, arrives at cpu.
+At time 511, process 9, exits the disk2.
+At time 519, process 12, exits the cpu.
+At time 519, process 9, arrives at cpu.
+At time 538, process 13, arrival.
+At time 560, process 14, arrival.
+At time 563, process 9, exits the cpu.
+At time 563, process 9, arrives at disk2.
+At time 563, process 13, arrives at cpu.
+At time 569, process 13, exits the cpu.
+At time 569, process 14, arrives at cpu.
+At time 599, process 14, exits the cpu.
+At time 633, process 15, arrival.
+At time 633, process 15, arrives at cpu.
+At time 635, process 11, exits the disk1.
+At time 635, process 13, arrives at disk1.
+At time 660, process 16, arrival.
+At time 661, process 15, exits the cpu.
+At time 661, process 11, arrives at cpu.
+At time 694, process 11, exits the cpu.
+At time 694, process 16, arrives at cpu.
+At time 700, process 16, exits the cpu.
+At time 700, process 16, exits the SYSTEM.
+At time 713, process 17, arrival.
+At time 713, process 17, arrives at cpu.
+At time 745, process 17, exits the cpu.
+At time 745, process 17, exits the SYSTEM.
+At time 750, process 13, exits the disk1.
+At time 750, process 13, arrives at cpu.
+At time 757, process 9, exits the disk2.
+At time 757, process 15, arrives at disk2.
+At time 770, process 18, arrival.
+At time 774, process 3, exits the network.
+At time 774, process 5, arrives at network.
+At time 777, process 13, exits the cpu.
+At time 777, process 13, arrives at disk1.
+At time 777, process 9, arrives at cpu.
+At time 793, process 9, exits the cpu.
+At time 793, process 9, exits the SYSTEM.
+At time 793, process 18, arrives at cpu.
+At time 803, process 19, arrival.
+At time 812, process 18, exits the cpu.
+At time 812, process 3, arrives at cpu.
+At time 850, process 20, arrival.
+At time 860, process 3, exits the cpu.
+At time 860, process 3, exits the SYSTEM.
+At time 860, process 19, arrives at cpu.
+At time 895, process 19, exits the cpu.
+At time 895, process 19, exits the SYSTEM.
+At time 895, process 20, arrives at cpu.
+At time 900, process 13, exits the disk1.
+At time 927, process 21, arrival.
+At time 933, process 20, exits the cpu.
+At time 933, process 13, arrives at cpu.
+At time 940, process 15, exits the disk2.
+At time 969, process 22, arrival.
+At time 977, process 13, exits the cpu.
+At time 977, process 21, arrives at cpu.
+At time 1008, process 21, exits the cpu.
+At time 1008, process 15, arrives at cpu.
+At time 1014, process 15, exits the cpu.
+At time 1014, process 15, exits the SYSTEM.
+At time 1014, process 22, arrives at cpu.
+At time 1049, process 23, arrival.
+At time 1055, process 22, exits the cpu.
+At time 1055, process 22, exits the SYSTEM.
+At time 1055, process 23, arrives at cpu.
+At time 1060, process 23, exits the cpu.
+At time 1060, process 23, exits the SYSTEM.
+At time 1123, process 24, arrival.
+At time 1123, process 24, arrives at cpu.
+At time 1141, process 24, exits the cpu.
+At time 1141, process 24, arrives at disk1.
+At time 1175, process 25, arrival.
+At time 1175, process 25, arrives at cpu.
+At time 1182, process 25, exits the cpu.
+At time 1182, process 25, exits the SYSTEM.
+At time 1185, process 5, exits the network.
+At time 1185, process 5, arrives at cpu.
+At time 1185, process 10, arrives at network.
+At time 1219, process 5, exits the cpu.
+At time 1219, process 5, exits the SYSTEM.
+At time 1232, process 26, arrival.
+At time 1232, process 26, arrives at cpu.
+At time 1239, process 24, exits the disk1.
+At time 1242, process 26, exits the cpu.
+At time 1242, process 26, exits the SYSTEM.
+At time 1242, process 24, arrives at cpu.
+At time 1257, process 27, arrival.
+At time 1257, process 24, exits the cpu.
+At time 1257, process 24, exits the SYSTEM.
+At time 1257, process 27, arrives at cpu.
+At time 1266, process 27, exits the cpu.
+At time 1279, process 28, arrival.
+At time 1279, process 28, arrives at cpu.
+At time 1291, process 28, exits the cpu.
+At time 1338, process 29, arrival.
+At time 1338, process 29, arrives at cpu.
+At time 1362, process 29, exits the cpu.
+At time 1362, process 29, exits the SYSTEM.
+At time 1400, process 30, arrival.
+At time 1400, process 30, arrives at cpu.
+At time 1437, process 30, exits the cpu.
+At time 1437, process 30, arrives at disk1.
+At time 1457, process 31, arrival.
+At time 1457, process 31, arrives at cpu.
+At time 1469, process 31, exits the cpu.
+At time 1490, process 10, exits the network.
+At time 1490, process 10, arrives at cpu.
+At time 1490, process 12, arrives at network.
+At time 1506, process 32, arrival.
+At time 1534, process 10, exits the cpu.
+At time 1534, process 10, exits the SYSTEM.
+At time 1534, process 32, arrives at cpu.
+At time 1569, process 33, arrival.
+At time 1583, process 32, exits the cpu.
+At time 1583, process 32, exits the SYSTEM.
+At time 1583, process 33, arrives at cpu.
+At time 1591, process 33, exits the cpu.
+At time 1604, process 30, exits the disk1.
+At time 1604, process 30, arrives at cpu.
+At time 1620, process 30, exits the cpu.
+At time 1644, process 34, arrival.
+At time 1644, process 34, arrives at cpu.
+At time 1688, process 34, exits the cpu.
+At time 1688, process 34, exits the SYSTEM.
+At time 1722, process 35, arrival.
+At time 1722, process 35, arrives at cpu.
+At time 1765, process 36, arrival.
+At time 1770, process 35, exits the cpu.
+At time 1770, process 36, arrives at cpu.
+At time 1808, process 37, arrival.
+At time 1820, process 36, exits the cpu.
+At time 1820, process 36, exits the SYSTEM.
+At time 1820, process 37, arrives at cpu.
+At time 1829, process 37, exits the cpu.
+At time 1829, process 37, exits the SYSTEM.
+At time 1871, process 38, arrival.
+At time 1871, process 38, arrives at cpu.
+At time 1886, process 38, exits the cpu.
+At time 1886, process 38, arrives at disk1.
+At time 1927, process 39, arrival.
+At time 1927, process 39, arrives at cpu.
+At time 1957, process 40, arrival.
+At time 1968, process 12, exits the network.
+At time 1968, process 14, arrives at network.
+At time 1972, process 38, exits the disk1.
+At time 1976, process 39, exits the cpu.
+At time 1976, process 40, arrives at cpu.
+At time 1981, process 41, arrival.
+At time 2001, process 40, exits the cpu.
+At time 2001, process 40, arrives at disk1.
+At time 2001, process 12, arrives at cpu.
+At time 2006, process 42, arrival.
+At time 2027, process 12, exits the cpu.
+At time 2027, process 43, arrival.
+At time 2027, process 12, exits the SYSTEM.
+At time 2027, process 38, arrives at cpu.
+At time 2060, process 38, exits the cpu.
+At time 2060, process 38, exits the SYSTEM.
+At time 2060, process 41, arrives at cpu.
+At time 2062, process 44, arrival.
+At time 2076, process 41, exits the cpu.
+At time 2076, process 42, arrives at cpu.
+At time 2106, process 40, exits the disk1.
+At time 2108, process 42, exits the cpu.
+At time 2108, process 42, exits the SYSTEM.
+At time 2108, process 43, arrives at cpu.
+At time 2113, process 45, arrival.
+At time 2131, process 43, exits the cpu.
+At time 2131, process 43, exits the SYSTEM.
+At time 2131, process 44, arrives at cpu.
+At time 2136, process 46, arrival.
+At time 2142, process 44, exits the cpu.
+At time 2142, process 44, arrives at disk1.
+At time 2142, process 40, arrives at cpu.
+At time 2154, process 40, exits the cpu.
+At time 2154, process 40, exits the SYSTEM.
+At time 2154, process 45, arrives at cpu.
+At time 2167, process 45, exits the cpu.
+At time 2167, process 45, arrives at disk2.
+At time 2167, process 46, arrives at cpu.
+At time 2169, process 47, arrival.
+At time 2190, process 46, exits the cpu.
+At time 2190, process 46, exits the SYSTEM.
+At time 2190, process 47, arrives at cpu.
+At time 2216, process 47, exits the cpu.
+At time 2248, process 48, arrival.
+At time 2248, process 48, arrives at cpu.
+At time 2270, process 49, arrival.
+At time 2277, process 44, exits the disk1.
+At time 2277, process 47, arrives at disk1.
+At time 2283, process 48, exits the cpu.
+At time 2283, process 49, arrives at cpu.
+At time 2299, process 49, exits the cpu.
+At time 2299, process 49, exits the SYSTEM.
+At time 2299, process 44, arrives at cpu.
+At time 2318, process 50, arrival.
+At time 2319, process 44, exits the cpu.
+At time 2319, process 44, exits the SYSTEM.
+At time 2319, process 50, arrives at cpu.
+At time 2327, process 50, exits the cpu.
+At time 2327, process 50, exits the SYSTEM.
+At time 2355, process 45, exits the disk2.
+At time 2355, process 45, arrives at cpu.
+At time 2355, process 48, arrives at disk2.
+At time 2372, process 45, exits the cpu.
+At time 2372, process 45, exits the SYSTEM.
+At time 2374, process 51, arrival.
+At time 2374, process 51, arrives at cpu.
+At time 2393, process 14, exits the network.
+At time 2393, process 11, arrives at network.
+At time 2395, process 47, exits the disk1.
+At time 2413, process 52, arrival.
+At time 2416, process 51, exits the cpu.
+At time 2416, process 51, arrives at disk1.
+At time 2416, process 14, arrives at cpu.
+At time 2422, process 14, exits the cpu.
+At time 2422, process 14, exits the SYSTEM.
+At time 2422, process 47, arrives at cpu.
+At time 2432, process 47, exits the cpu.
+At time 2432, process 47, exits the SYSTEM.
+At time 2432, process 52, arrives at cpu.
+At time 2434, process 53, arrival.
+At time 2441, process 52, exits the cpu.
+At time 2441, process 52, exits the SYSTEM.
+At time 2441, process 53, arrives at cpu.
+At time 2456, process 53, exits the cpu.
+At time 2456, process 53, exits the SYSTEM.
+At time 2476, process 54, arrival.
+At time 2476, process 54, arrives at cpu.
+At time 2495, process 48, exits the disk2.
+At time 2516, process 55, arrival.
+At time 2523, process 54, exits the cpu.
+At time 2523, process 54, exits the SYSTEM.
+At time 2523, process 48, arrives at cpu.
+At time 2559, process 56, arrival.
+At time 2565, process 51, exits the disk1.
+At time 2571, process 48, exits the cpu.
+At time 2571, process 48, exits the SYSTEM.
+At time 2571, process 55, arrives at cpu.
+At time 2589, process 55, exits the cpu.
+At time 2589, process 56, arrives at cpu.
+At time 2610, process 56, exits the cpu.
+At time 2610, process 56, exits the SYSTEM.
+At time 2610, process 51, arrives at cpu.
+At time 2630, process 57, arrival.
+At time 2657, process 51, exits the cpu.
+At time 2657, process 51, exits the SYSTEM.
+At time 2657, process 57, arrives at cpu.
+At time 2664, process 58, arrival.
+At time 2699, process 57, exits the cpu.
+At time 2699, process 57, exits the SYSTEM.
+At time 2699, process 58, arrives at cpu.
+At time 2724, process 59, arrival.
+At time 2739, process 58, exits the cpu.
+At time 2739, process 58, arrives at disk1.
+At time 2739, process 59, arrives at cpu.
+At time 2753, process 60, arrival.
+At time 2759, process 59, exits the cpu.
+At time 2759, process 59, exits the SYSTEM.
+At time 2759, process 60, arrives at cpu.
+At time 2775, process 11, exits the network.
+At time 2775, process 18, arrives at network.
+At time 2777, process 60, exits the cpu.
+At time 2777, process 60, arrives at disk2.
+At time 2777, process 11, arrives at cpu.
+At time 2782, process 61, arrival.
+At time 2820, process 11, exits the cpu.
+At time 2820, process 61, arrives at cpu.
+At time 2822, process 62, arrival.
+At time 2836, process 61, exits the cpu.
+At time 2836, process 61, exits the SYSTEM.
+At time 2836, process 62, arrives at cpu.
+At time 2865, process 62, exits the cpu.
+At time 2865, process 62, exits the SYSTEM.
+At time 2885, process 63, arrival.
+At time 2885, process 63, arrives at cpu.
+At time 2901, process 58, exits the disk1.
+At time 2924, process 63, exits the cpu.
+At time 2924, process 63, exits the SYSTEM.
+At time 2924, process 58, arrives at cpu.
+At time 2928, process 64, arrival.
+At time 2968, process 60, exits the disk2.
+At time 2968, process 58, exits the cpu.
+At time 2968, process 58, exits the SYSTEM.
+At time 2968, process 64, arrives at cpu.
+At time 2977, process 65, arrival.
+At time 2998, process 64, exits the cpu.
+At time 2998, process 64, exits the SYSTEM.
+At time 2998, process 60, arrives at cpu.
+At time 3008, process 66, arrival.
+At time 3011, process 60, exits the cpu.
+At time 3011, process 60, arrives at disk1.
+At time 3011, process 65, arrives at cpu.
+At time 3039, process 65, exits the cpu.
+At time 3039, process 65, exits the SYSTEM.
+At time 3039, process 66, arrives at cpu.
+At time 3050, process 67, arrival.
+At time 3084, process 18, exits the network.
+At time 3084, process 20, arrives at network.
+At time 3088, process 66, exits the cpu.
+At time 3088, process 67, arrives at cpu.
+At time 3092, process 68, arrival.
+At time 3105, process 67, exits the cpu.
+At time 3105, process 18, arrives at cpu.
+At time 3140, process 69, arrival.
+At time 3143, process 60, exits the disk1.
+At time 3145, process 18, exits the cpu.
+At time 3145, process 68, arrives at cpu.
+At time 3154, process 68, exits the cpu.
+At time 3154, process 68, arrives at disk1.
+At time 3154, process 69, arrives at cpu.
+At time 3179, process 69, exits the cpu.
+At time 3179, process 69, exits the SYSTEM.
+At time 3179, process 60, arrives at cpu.
+At time 3190, process 70, arrival.
+At time 3200, process 60, exits the cpu.
+At time 3200, process 70, arrives at cpu.
+At time 3229, process 71, arrival.
+At time 3250, process 70, exits the cpu.
+At time 3250, process 70, exits the SYSTEM.
+At time 3250, process 71, arrives at cpu.
+At time 3261, process 71, exits the cpu.
+At time 3268, process 72, arrival.
+At time 3268, process 72, arrives at cpu.
+At time 3294, process 68, exits the disk1.
+At time 3299, process 73, arrival.
+At time 3316, process 72, exits the cpu.
+At time 3316, process 72, exits the SYSTEM.
+At time 3316, process 68, arrives at cpu.
+At time 3327, process 74, arrival.
+At time 3359, process 68, exits the cpu.
+At time 3359, process 68, exits the SYSTEM.
+At time 3359, process 73, arrives at cpu.
+At time 3368, process 73, exits the cpu.
+At time 3368, process 73, arrives at disk1.
+At time 3368, process 74, arrives at cpu.
+At time 3379, process 75, arrival.
+At time 3392, process 74, exits the cpu.
+At time 3392, process 74, arrives at disk2.
+At time 3392, process 75, arrives at cpu.
+At time 3408, process 75, exits the cpu.
+At time 3408, process 75, exits the SYSTEM.
+At time 3414, process 20, exits the network.
+At time 3414, process 20, arrives at cpu.
+At time 3414, process 13, arrives at network.
+At time 3434, process 20, exits the cpu.
+At time 3434, process 20, exits the SYSTEM.
+At time 3445, process 76, arrival.
+At time 3445, process 76, arrives at cpu.
+At time 3469, process 77, arrival.
+At time 3491, process 76, exits the cpu.
+At time 3491, process 76, exits the SYSTEM.
+At time 3491, process 77, arrives at cpu.
+At time 3518, process 73, exits the disk1.
+At time 3531, process 78, arrival.
+At time 3536, process 77, exits the cpu.
+At time 3536, process 77, exits the SYSTEM.
+At time 3536, process 73, arrives at cpu.
+At time 3547, process 74, exits the disk2.
+At time 3553, process 79, arrival.
+At time 3582, process 73, exits the cpu.
+At time 3582, process 73, exits the SYSTEM.
+At time 3582, process 78, arrives at cpu.
+At time 3595, process 80, arrival.
+At time 3599, process 78, exits the cpu.
+At time 3599, process 74, arrives at cpu.
+At time 3631, process 74, exits the cpu.
+At time 3631, process 79, arrives at cpu.
+At time 3668, process 79, exits the cpu.
+At time 3668, process 79, exits the SYSTEM.
+At time 3668, process 80, arrives at cpu.
+At time 3669, process 81, arrival.
+At time 3689, process 80, exits the cpu.
+At time 3689, process 81, arrives at cpu.
+At time 3696, process 81, exits the cpu.
+At time 3696, process 81, exits the SYSTEM.
+At time 3715, process 13, exits the network.
+At time 3715, process 13, arrives at cpu.
+At time 3715, process 21, arrives at network.
+At time 3730, process 13, exits the cpu.
+At time 3730, process 13, exits the SYSTEM.
+At time 3746, process 82, arrival.
+At time 3746, process 82, arrives at cpu.
+At time 3789, process 82, exits the cpu.
+At time 3808, process 83, arrival.
+At time 3808, process 83, arrives at cpu.
+At time 3830, process 84, arrival.
+At time 3850, process 83, exits the cpu.
+At time 3850, process 83, exits the SYSTEM.
+At time 3850, process 84, arrives at cpu.
+At time 3867, process 85, arrival.
+At time 3881, process 84, exits the cpu.
+At time 3881, process 84, arrives at disk1.
+At time 3881, process 85, arrives at cpu.
+At time 3909, process 85, exits the cpu.
+At time 3909, process 85, exits the SYSTEM.
+At time 3921, process 86, arrival.
+At time 3921, process 86, arrives at cpu.
+At time 3966, process 87, arrival.
+At time 3970, process 86, exits the cpu.
+At time 3970, process 87, arrives at cpu.
+At time 3985, process 87, exits the cpu.
+At time 3985, process 87, exits the SYSTEM.
+At time 4009, process 88, arrival.
+At time 4009, process 88, arrives at cpu.
+At time 4026, process 88, exits the cpu.
+At time 4037, process 84, exits the disk1.
+At time 4037, process 84, arrives at cpu.
+At time 4056, process 84, exits the cpu.
+At time 4056, process 84, exits the SYSTEM.
+At time 4059, process 89, arrival.
+At time 4059, process 89, arrives at cpu.
+At time 4085, process 89, exits the cpu.
+At time 4085, process 89, exits the SYSTEM.
+At time 4137, process 90, arrival.
+At time 4137, process 90, arrives at cpu.
+At time 4149, process 90, exits the cpu.
+At time 4149, process 90, arrives at disk1.
+At time 4189, process 21, exits the network.
+At time 4189, process 21, arrives at cpu.
+At time 4189, process 27, arrives at network.
+At time 4196, process 91, arrival.
+At time 4201, process 90, exits the disk1.
+At time 4232, process 21, exits the cpu.
+At time 4232, process 91, arrives at cpu.
+At time 4249, process 92, arrival.
+At time 4253, process 91, exits the cpu.
+At time 4253, process 91, exits the SYSTEM.
+At time 4253, process 90, arrives at cpu.
+At time 4297, process 90, exits the cpu.
+At time 4297, process 90, exits the SYSTEM.
+At time 4297, process 92, arrives at cpu.
+At time 4308, process 92, exits the cpu.
+At time 4324, process 93, arrival.
+At time 4324, process 93, arrives at cpu.
+At time 4337, process 93, exits the cpu.
+At time 4337, process 93, exits the SYSTEM.
+At time 4351, process 94, arrival.
+At time 4351, process 94, arrives at cpu.
+At time 4356, process 94, exits the cpu.
+At time 4356, process 94, arrives at disk1.
+At time 4410, process 95, arrival.
+At time 4410, process 95, arrives at cpu.
+At time 4443, process 94, exits the disk1.
+At time 4448, process 96, arrival.
+At time 4454, process 95, exits the cpu.
+At time 4454, process 94, arrives at cpu.
+At time 4482, process 94, exits the cpu.
+At time 4482, process 94, exits the SYSTEM.
+At time 4482, process 96, arrives at cpu.
+At time 4508, process 97, arrival.
+At time 4526, process 96, exits the cpu.
+At time 4526, process 97, arrives at cpu.
+At time 4546, process 97, exits the cpu.
+At time 4546, process 97, exits the SYSTEM.
+At time 4574, process 98, arrival.
+At time 4574, process 98, arrives at cpu.
+At time 4599, process 98, exits the cpu.
+At time 4599, process 98, exits the SYSTEM.
+At time 4619, process 99, arrival.
+At time 4619, process 99, arrives at cpu.
+At time 4636, process 99, exits the cpu.
+At time 4636, process 99, exits the SYSTEM.
+At time 4648, process 27, exits the network.
+At time 4648, process 27, arrives at cpu.
+At time 4648, process 28, arrives at network.
+At time 4658, process 100, arrival.
+At time 4672, process 27, exits the cpu.
+At time 4672, process 27, exits the SYSTEM.
+At time 4672, process 100, arrives at cpu.
+At time 4683, process 101, arrival.
+At time 4711, process 100, exits the cpu.
+At time 4711, process 100, exits the SYSTEM.
+At time 4711, process 101, arrives at cpu.
+At time 4712, process 102, arrival.
+At time 4738, process 101, exits the cpu.
+At time 4738, process 102, arrives at cpu.
+At time 4774, process 103, arrival.
+At time 4782, process 102, exits the cpu.
+At time 4782, process 102, arrives at disk1.
+At time 4782, process 103, arrives at cpu.
+At time 4803, process 104, arrival.
+At time 4816, process 103, exits the cpu.
+At time 4816, process 103, exits the SYSTEM.
+At time 4816, process 104, arrives at cpu.
+At time 4838, process 104, exits the cpu.
+At time 4838, process 104, exits the SYSTEM.
+At time 4846, process 105, arrival.
+At time 4846, process 105, arrives at cpu.
+At time 4854, process 105, exits the cpu.
+At time 4897, process 106, arrival.
+At time 4897, process 106, arrives at cpu.
+At time 4923, process 106, exits the cpu.
+At time 4923, process 106, arrives at disk2.
+At time 4933, process 102, exits the disk1.
+At time 4933, process 102, arrives at cpu.
+At time 4946, process 107, arrival.
+At time 4967, process 102, exits the cpu.
+At time 4967, process 102, exits the SYSTEM.
+At time 4967, process 107, arrives at cpu.
+At time 4984, process 108, arrival.
+At time 5009, process 28, exits the network.
+At time 5009, process 31, arrives at network.
+At time 5010, process 107, exits the cpu.
+At time 5010, process 107, exits the SYSTEM.
+At time 5010, process 108, arrives at cpu.
+At time 5016, process 108, exits the cpu.
+At time 5016, process 28, arrives at cpu.
+At time 5024, process 109, arrival.
+At time 5025, process 28, exits the cpu.
+At time 5025, process 28, arrives at disk1.
+At time 5025, process 109, arrives at cpu.
+At time 5038, process 109, exits the cpu.
+At time 5046, process 110, arrival.
+At time 5046, process 110, arrives at cpu.
+At time 5053, process 106, exits the disk2.
+At time 5075, process 111, arrival.
+At time 5095, process 110, exits the cpu.
+At time 5095, process 110, exits the SYSTEM.
+At time 5095, process 106, arrives at cpu.
+At time 5120, process 112, arrival.
+At time 5126, process 106, exits the cpu.
+At time 5126, process 111, arrives at cpu.
+At time 5153, process 111, exits the cpu.
+At time 5153, process 111, arrives at disk2.
+At time 5153, process 112, arrives at cpu.
+At time 5169, process 113, arrival.
+At time 5178, process 112, exits the cpu.
+At time 5178, process 113, arrives at cpu.
+At time 5214, process 28, exits the disk1.
+At time 5216, process 111, exits the disk2.
+At time 5226, process 113, exits the cpu.
+At time 5226, process 113, exits the SYSTEM.
+At time 5226, process 28, arrives at cpu.
+At time 5228, process 114, arrival.
+At time 5256, process 28, exits the cpu.
+At time 5256, process 111, arrives at cpu.
+At time 5284, process 111, exits the cpu.
+At time 5284, process 111, arrives at disk1.
+At time 5284, process 114, arrives at cpu.
+At time 5285, process 115, arrival.
+At time 5306, process 114, exits the cpu.
+At time 5306, process 114, exits the SYSTEM.
+At time 5306, process 115, arrives at cpu.
+At time 5313, process 115, exits the cpu.
+At time 5357, process 31, exits the network.
+At time 5357, process 31, arrives at cpu.
+At time 5357, process 33, arrives at network.
+At time 5359, process 116, arrival.
+At time 5362, process 31, exits the cpu.
+At time 5362, process 31, exits the SYSTEM.
+At time 5362, process 116, arrives at cpu.
+At time 5379, process 116, exits the cpu.
+At time 5379, process 116, arrives at disk2.
+At time 5392, process 111, exits the disk1.
+At time 5392, process 111, arrives at cpu.
+At time 5433, process 117, arrival.
+At time 5435, process 111, exits the cpu.
+At time 5435, process 111, arrives at disk1.
+At time 5435, process 117, arrives at cpu.
+At time 5445, process 117, exits the cpu.
+At time 5454, process 118, arrival.
+At time 5454, process 118, arrives at cpu.
+At time 5497, process 119, arrival.
+At time 5499, process 118, exits the cpu.
+At time 5499, process 118, exits the SYSTEM.
+At time 5499, process 119, arrives at cpu.
+At time 5510, process 119, exits the cpu.
+At time 5510, process 119, exits the SYSTEM.
+At time 5538, process 120, arrival.
+At time 5538, process 120, arrives at cpu.
+At time 5542, process 111, exits the disk1.
+At time 5558, process 120, exits the cpu.
+At time 5558, process 120, exits the SYSTEM.
+At time 5558, process 111, arrives at cpu.
+At time 5561, process 116, exits the disk2.
+At time 5569, process 111, exits the cpu.
+At time 5569, process 116, arrives at cpu.
+At time 5583, process 116, exits the cpu.
+At time 5583, process 116, exits the SYSTEM.
+At time 5606, process 121, arrival.
+At time 5606, process 121, arrives at cpu.
+At time 5614, process 121, exits the cpu.
+At time 5671, process 122, arrival.
+At time 5671, process 122, arrives at cpu.
+At time 5685, process 122, exits the cpu.
+At time 5685, process 122, arrives at disk1.
+At time 5736, process 123, arrival.
+At time 5736, process 123, arrives at cpu.
+At time 5769, process 122, exits the disk1.
+At time 5786, process 123, exits the cpu.
+At time 5786, process 123, arrives at disk1.
+At time 5786, process 122, arrives at cpu.
+At time 5795, process 122, exits the cpu.
+At time 5795, process 122, exits the SYSTEM.
+At time 5808, process 124, arrival.
+At time 5808, process 124, arrives at cpu.
+At time 5816, process 33, exits the network.
+At time 5816, process 30, arrives at network.
+At time 5834, process 124, exits the cpu.
+At time 5834, process 124, arrives at disk2.
+At time 5834, process 33, arrives at cpu.
+At time 5842, process 33, exits the cpu.
+At time 5848, process 123, exits the disk1.
+At time 5848, process 123, arrives at cpu.
+At time 5860, process 123, exits the cpu.
+At time 5860, process 123, exits the SYSTEM.
+At time 5881, process 125, arrival.
+At time 5881, process 125, arrives at cpu.
+At time 5896, process 125, exits the cpu.
+At time 5896, process 125, exits the SYSTEM.
+At time 5937, process 126, arrival.
+At time 5937, process 126, arrives at cpu.
+At time 5956, process 126, exits the cpu.
+At time 5956, process 126, arrives at disk1.
+At time 5977, process 127, arrival.
+At time 5977, process 127, arrives at cpu.
+At time 5982, process 124, exits the disk2.
+At time 5982, process 33, arrives at disk2.
+At time 6003, process 127, exits the cpu.
+At time 6003, process 124, arrives at cpu.
+At time 6009, process 128, arrival.
+At time 6030, process 124, exits the cpu.
+At time 6030, process 128, arrives at cpu.
+At time 6033, process 129, arrival.
+At time 6043, process 128, exits the cpu.
+At time 6043, process 128, exits the SYSTEM.
+At time 6043, process 129, arrives at cpu.
+At time 6053, process 129, exits the cpu.
+At time 6095, process 130, arrival.
+At time 6095, process 130, arrives at cpu.
+At time 6120, process 126, exits the disk1.
+At time 6120, process 124, arrives at disk1.
+At time 6123, process 33, exits the disk2.
+At time 6123, process 127, arrives at disk2.
+At time 6134, process 130, exits the cpu.
+At time 6134, process 130, exits the SYSTEM.
+At time 6134, process 126, arrives at cpu.
+At time 6158, process 131, arrival.
+At time 6183, process 126, exits the cpu.
+At time 6183, process 33, arrives at cpu.
+At time 6189, process 33, exits the cpu.
+At time 6189, process 131, arrives at cpu.
+At time 6203, process 132, arrival.
+At time 6216, process 131, exits the cpu.
+At time 6216, process 132, arrives at cpu.
+At time 6225, process 132, exits the cpu.
+At time 6225, process 132, exits the SYSTEM.
+At time 6265, process 133, arrival.
+At time 6265, process 133, arrives at cpu.
+At time 6274, process 133, exits the cpu.
+At time 6274, process 133, exits the SYSTEM.
+At time 6292, process 30, exits the network.
+At time 6292, process 30, arrives at cpu.
+At time 6292, process 35, arrives at network.
+At time 6303, process 127, exits the disk2.
+At time 6303, process 131, arrives at disk2.
+At time 6319, process 124, exits the disk1.
+At time 6319, process 126, arrives at disk1.
+At time 6336, process 134, arrival.
+At time 6341, process 30, exits the cpu.
+At time 6341, process 30, exits the SYSTEM.
+At time 6341, process 127, arrives at cpu.
+At time 6358, process 127, exits the cpu.
+At time 6358, process 127, exits the SYSTEM.
+At time 6358, process 124, arrives at cpu.
+At time 6370, process 135, arrival.
+At time 6375, process 126, exits the disk1.
+At time 6393, process 124, exits the cpu.
+At time 6393, process 124, exits the SYSTEM.
+At time 6393, process 134, arrives at cpu.
+At time 6425, process 134, exits the cpu.
+At time 6425, process 135, arrives at cpu.
+At time 6428, process 131, exits the disk2.
+At time 6449, process 136, arrival.
+At time 6455, process 135, exits the cpu.
+At time 6455, process 135, exits the SYSTEM.
+At time 6455, process 126, arrives at cpu.
+At time 6488, process 126, exits the cpu.
+At time 6488, process 126, exits the SYSTEM.
+At time 6488, process 131, arrives at cpu.
+At time 6516, process 137, arrival.
+At time 6532, process 131, exits the cpu.
+At time 6532, process 131, exits the SYSTEM.
+At time 6532, process 136, arrives at cpu.
+At time 6552, process 136, exits the cpu.
+At time 6552, process 136, exits the SYSTEM.
+At time 6552, process 137, arrives at cpu.
+At time 6556, process 138, arrival.
+At time 6568, process 137, exits the cpu.
+At time 6568, process 137, exits the SYSTEM.
+At time 6568, process 138, arrives at cpu.
+At time 6585, process 139, arrival.
+At time 6606, process 140, arrival.
+At time 6618, process 138, exits the cpu.
+At time 6618, process 139, arrives at cpu.
+At time 6649, process 139, exits the cpu.
+At time 6649, process 139, arrives at disk1.
+At time 6649, process 140, arrives at cpu.
+At time 6665, process 35, exits the network.
+At time 6665, process 39, arrives at network.
+At time 6671, process 141, arrival.
+At time 6671, process 140, exits the cpu.
+At time 6671, process 140, arrives at disk2.
+At time 6671, process 35, arrives at cpu.
+At time 6692, process 35, exits the cpu.
+At time 6692, process 35, exits the SYSTEM.
+At time 6692, process 141, arrives at cpu.
+At time 6727, process 141, exits the cpu.
+At time 6736, process 142, arrival.
+At time 6736, process 142, arrives at cpu.
+At time 6759, process 143, arrival.
+At time 6759, process 142, exits the cpu.
+At time 6759, process 143, arrives at cpu.
+At time 6789, process 143, exits the cpu.
+At time 6789, process 143, exits the SYSTEM.
+At time 6794, process 139, exits the disk1.
+At time 6794, process 139, arrives at cpu.
+At time 6834, process 144, arrival.
+At time 6836, process 139, exits the cpu.
+At time 6836, process 139, exits the SYSTEM.
+At time 6836, process 144, arrives at cpu.
+At time 6863, process 140, exits the disk2.
+At time 6863, process 142, arrives at disk2.
+At time 6877, process 144, exits the cpu.
+At time 6877, process 144, arrives at disk1.
+At time 6877, process 140, arrives at cpu.
+At time 6898, process 140, exits the cpu.
+At time 6898, process 140, exits the SYSTEM.
+At time 6908, process 145, arrival.
+At time 6908, process 145, arrives at cpu.
+At time 6932, process 144, exits the disk1.
+At time 6938, process 142, exits the disk2.
+At time 6950, process 145, exits the cpu.
+At time 6950, process 144, arrives at cpu.
+At time 6956, process 146, arrival.
+At time 6966, process 144, exits the cpu.
+At time 6966, process 144, arrives at disk1.
+At time 6966, process 142, arrives at cpu.
+At time 7010, process 142, exits the cpu.
+At time 7010, process 146, arrives at cpu.
+At time 7019, process 147, arrival.
+At time 7060, process 146, exits the cpu.
+At time 7060, process 146, exits the SYSTEM.
+At time 7060, process 147, arrives at cpu.
+At time 7065, process 148, arrival.
+At time 7084, process 39, exits the network.
+At time 7084, process 41, arrives at network.
+At time 7090, process 147, exits the cpu.
+At time 7090, process 148, arrives at cpu.
+At time 7102, process 148, exits the cpu.
+At time 7102, process 148, exits the SYSTEM.
+At time 7102, process 39, arrives at cpu.
+At time 7109, process 149, arrival.
+At time 7127, process 39, exits the cpu.
+At time 7127, process 39, exits the SYSTEM.
+At time 7127, process 149, arrives at cpu.
+At time 7144, process 144, exits the disk1.
+At time 7169, process 150, arrival.
+At time 7172, process 149, exits the cpu.
+At time 7172, process 149, exits the SYSTEM.
+At time 7172, process 144, arrives at cpu.
+At time 7188, process 144, exits the cpu.
+At time 7188, process 150, arrives at cpu.
+At time 7221, process 150, exits the cpu.
+At time 7248, process 151, arrival.
+At time 7248, process 151, arrives at cpu.
+At time 7253, process 151, exits the cpu.
+At time 7253, process 151, exits the SYSTEM.
+At time 7311, process 152, arrival.
+At time 7311, process 152, arrives at cpu.
+At time 7327, process 152, exits the cpu.
+At time 7384, process 153, arrival.
+At time 7384, process 153, arrives at cpu.
+At time 7428, process 154, arrival.
+At time 7428, process 153, exits the cpu.
+At time 7428, process 153, exits the SYSTEM.
+At time 7428, process 154, arrives at cpu.
+At time 7466, process 154, exits the cpu.
+At time 7486, process 155, arrival.
+At time 7486, process 155, arrives at cpu.
+At time 7494, process 155, exits the cpu.
+At time 7494, process 155, exits the SYSTEM.
+At time 7531, process 41, exits the network.
+At time 7531, process 41, arrives at cpu.
+At time 7531, process 55, arrives at network.
+At time 7557, process 156, arrival.
+At time 7576, process 41, exits the cpu.
+At time 7576, process 41, exits the SYSTEM.
+At time 7576, process 156, arrives at cpu.
+At time 7603, process 157, arrival.
+At time 7607, process 156, exits the cpu.
+At time 7607, process 157, arrives at cpu.
+At time 7647, process 158, arrival.
+At time 7648, process 157, exits the cpu.
+At time 7648, process 157, exits the SYSTEM.
+At time 7648, process 158, arrives at cpu.
+At time 7671, process 158, exits the cpu.
+At time 7671, process 158, exits the SYSTEM.
+At time 7678, process 159, arrival.
+At time 7678, process 159, arrives at cpu.
+At time 7700, process 160, arrival.
+At time 7717, process 159, exits the cpu.
+At time 7717, process 159, arrives at disk1.
+At time 7717, process 160, arrives at cpu.
+At time 7732, process 160, exits the cpu.
+At time 7732, process 160, exits the SYSTEM.
+At time 7760, process 161, arrival.
+At time 7760, process 161, arrives at cpu.
+At time 7785, process 162, arrival.
+At time 7808, process 161, exits the cpu.
+At time 7808, process 161, exits the SYSTEM.
+At time 7808, process 162, arrives at cpu.
+At time 7820, process 163, arrival.
+At time 7837, process 162, exits the cpu.
+At time 7837, process 162, exits the SYSTEM.
+At time 7837, process 163, arrives at cpu.
+At time 7849, process 164, arrival.
+At time 7852, process 163, exits the cpu.
+At time 7852, process 163, exits the SYSTEM.
+At time 7852, process 164, arrives at cpu.
+At time 7873, process 159, exits the disk1.
+At time 7879, process 55, exits the network.
+At time 7879, process 11, arrives at network.
+At time 7890, process 165, arrival.
+At time 7901, process 164, exits the cpu.
+At time 7901, process 164, exits the SYSTEM.
+At time 7901, process 159, arrives at cpu.
+At time 7910, process 166, arrival.
+At time 7942, process 159, exits the cpu.
+At time 7942, process 159, exits the SYSTEM.
+At time 7942, process 55, arrives at cpu.
+At time 7956, process 167, arrival.
+At time 7983, process 55, exits the cpu.
+At time 7983, process 165, arrives at cpu.
+At time 7999, process 165, exits the cpu.
+At time 7999, process 165, arrives at disk1.
+At time 7999, process 166, arrives at cpu.
+At time 8007, process 166, exits the cpu.
+At time 8007, process 166, exits the SYSTEM.
+At time 8007, process 167, arrives at cpu.
+At time 8019, process 167, exits the cpu.
+At time 8019, process 167, exits the SYSTEM.
+At time 8021, process 168, arrival.
+At time 8021, process 168, arrives at cpu.
+At time 8057, process 169, arrival.
+At time 8064, process 165, exits the disk1.
+At time 8071, process 168, exits the cpu.
+At time 8071, process 168, arrives at disk1.
+At time 8071, process 169, arrives at cpu.
+At time 8098, process 170, arrival.
+At time 8113, process 169, exits the cpu.
+At time 8113, process 169, arrives at disk2.
+At time 8113, process 165, arrives at cpu.
+At time 8122, process 165, exits the cpu.
+At time 8122, process 165, exits the SYSTEM.
+At time 8122, process 170, arrives at cpu.
+At time 8131, process 171, arrival.
+At time 8155, process 172, arrival.
+At time 8164, process 170, exits the cpu.
+At time 8164, process 171, arrives at cpu.
+At time 8197, process 171, exits the cpu.
+At time 8197, process 172, arrives at cpu.
+At time 8218, process 173, arrival.
+At time 8240, process 172, exits the cpu.
+At time 8240, process 172, exits the SYSTEM.
+At time 8240, process 173, arrives at cpu.
+At time 8245, process 169, exits the disk2.
+At time 8250, process 173, exits the cpu.
+At time 8250, process 173, exits the SYSTEM.
+At time 8250, process 169, arrives at cpu.
+At time 8264, process 169, exits the cpu.
+At time 8268, process 168, exits the disk1.
+At time 8268, process 168, arrives at cpu.
+At time 8268, process 171, arrives at disk1.
+At time 8269, process 11, exits the network.
+At time 8269, process 66, arrives at network.
+At time 8278, process 168, exits the cpu.
+At time 8278, process 11, arrives at cpu.
+At time 8284, process 174, arrival.
+At time 8328, process 11, exits the cpu.
+At time 8328, process 174, arrives at cpu.
+At time 8351, process 175, arrival.
+At time 8375, process 174, exits the cpu.
+At time 8375, process 175, arrives at cpu.
+At time 8394, process 175, exits the cpu.
+At time 8394, process 175, arrives at disk2.
+At time 8395, process 176, arrival.
+At time 8395, process 176, arrives at cpu.
+At time 8411, process 176, exits the cpu.
+At time 8430, process 171, exits the disk1.
+At time 8430, process 171, arrives at cpu.
+At time 8433, process 177, arrival.
+At time 8475, process 171, exits the cpu.
+At time 8475, process 171, exits the SYSTEM.
+At time 8475, process 177, arrives at cpu.
+At time 8487, process 178, arrival.
+At time 8515, process 177, exits the cpu.
+At time 8515, process 177, arrives at disk1.
+At time 8515, process 178, arrives at cpu.
+At time 8538, process 178, exits the cpu.
+At time 8557, process 175, exits the disk2.
+At time 8557, process 175, arrives at cpu.
+At time 8558, process 179, arrival.
+At time 8596, process 180, arrival.
+At time 8607, process 175, exits the cpu.
+At time 8607, process 179, arrives at cpu.
+At time 8636, process 181, arrival.
+At time 8637, process 66, exits the network.
+At time 8637, process 67, arrives at network.
+At time 8648, process 179, exits the cpu.
+At time 8648, process 179, exits the SYSTEM.
+At time 8648, process 180, arrives at cpu.
+At time 8686, process 177, exits the disk1.
+At time 8691, process 180, exits the cpu.
+At time 8691, process 181, arrives at cpu.
+At time 8692, process 182, arrival.
+At time 8697, process 181, exits the cpu.
+At time 8697, process 66, arrives at cpu.
+At time 8715, process 66, exits the cpu.
+At time 8715, process 66, arrives at disk1.
+At time 8715, process 177, arrives at cpu.
+At time 8721, process 177, exits the cpu.
+At time 8721, process 177, exits the SYSTEM.
+At time 8721, process 182, arrives at cpu.
+At time 8739, process 182, exits the cpu.
+At time 8739, process 182, exits the SYSTEM.
+At time 8754, process 183, arrival.
+At time 8754, process 183, arrives at cpu.
+At time 8773, process 183, exits the cpu.
+At time 8773, process 183, exits the SYSTEM.
+At time 8797, process 184, arrival.
+At time 8797, process 184, arrives at cpu.
+At time 8798, process 66, exits the disk1.
+At time 8822, process 185, arrival.
+At time 8828, process 184, exits the cpu.
+At time 8828, process 184, arrives at disk1.
+At time 8828, process 66, arrives at cpu.
+At time 8842, process 66, exits the cpu.
+At time 8842, process 66, exits the SYSTEM.
+At time 8842, process 185, arrives at cpu.
+At time 8865, process 186, arrival.
+At time 8865, process 185, exits the cpu.
+At time 8865, process 185, exits the SYSTEM.
+At time 8865, process 186, arrives at cpu.
+At time 8882, process 186, exits the cpu.
+At time 8911, process 187, arrival.
+At time 8911, process 187, arrives at cpu.
+At time 8930, process 184, exits the disk1.
+At time 8961, process 187, exits the cpu.
+At time 8961, process 184, arrives at cpu.
+At time 8988, process 188, arrival.
+At time 9006, process 184, exits the cpu.
+At time 9006, process 184, arrives at disk1.
+At time 9006, process 188, arrives at cpu.
+At time 9030, process 189, arrival.
+At time 9035, process 188, exits the cpu.
+At time 9035, process 188, arrives at disk2.
+At time 9035, process 189, arrives at cpu.
+At time 9052, process 67, exits the network.
+At time 9052, process 18, arrives at network.
+At time 9063, process 189, exits the cpu.
+At time 9063, process 67, arrives at cpu.
+At time 9071, process 190, arrival.
+At time 9087, process 67, exits the cpu.
+At time 9087, process 67, exits the SYSTEM.
+At time 9087, process 190, arrives at cpu.
+At time 9117, process 191, arrival.
+At time 9130, process 190, exits the cpu.
+At time 9130, process 191, arrives at cpu.
+At time 9143, process 192, arrival.
+At time 9151, process 184, exits the disk1.
+At time 9151, process 191, exits the cpu.
+At time 9151, process 191, exits the SYSTEM.
+At time 9151, process 192, arrives at cpu.
+At time 9166, process 193, arrival.
+At time 9178, process 192, exits the cpu.
+At time 9178, process 184, arrives at cpu.
+At time 9183, process 184, exits the cpu.
+At time 9183, process 184, exits the SYSTEM.
+At time 9183, process 193, arrives at cpu.
+At time 9203, process 193, exits the cpu.
+At time 9203, process 193, exits the SYSTEM.
+At time 9224, process 188, exits the disk2.
+At time 9224, process 188, arrives at cpu.
+At time 9244, process 194, arrival.
+At time 9245, process 188, exits the cpu.
+At time 9245, process 188, exits the SYSTEM.
+At time 9245, process 194, arrives at cpu.
+At time 9257, process 194, exits the cpu.
+At time 9257, process 194, arrives at disk1.
+At time 9305, process 195, arrival.
+At time 9305, process 195, arrives at cpu.
+At time 9312, process 195, exits the cpu.
+At time 9312, process 195, exits the SYSTEM.
+At time 9326, process 196, arrival.
+At time 9326, process 196, arrives at cpu.
+At time 9345, process 196, exits the cpu.
+At time 9345, process 196, exits the SYSTEM.
+At time 9346, process 194, exits the disk1.
+At time 9346, process 194, arrives at cpu.
+At time 9354, process 197, arrival.
+At time 9396, process 194, exits the cpu.
+At time 9396, process 194, exits the SYSTEM.
+At time 9396, process 197, arrives at cpu.
+At time 9409, process 198, arrival.
+At time 9439, process 197, exits the cpu.
+At time 9439, process 198, arrives at cpu.
+At time 9457, process 18, exits the network.
+At time 9457, process 60, arrives at network.
+At time 9468, process 198, exits the cpu.
+At time 9468, process 198, arrives at disk1.
+At time 9468, process 18, arrives at cpu.
+At time 9472, process 199, arrival.
+At time 9491, process 18, exits the cpu.
+At time 9491, process 18, exits the SYSTEM.
+At time 9491, process 199, arrives at cpu.
+At time 9503, process 200, arrival.
+At time 9524, process 199, exits the cpu.
+At time 9524, process 200, arrives at cpu.
+At time 9530, process 200, exits the cpu.
+At time 9530, process 200, arrives at disk2.
+At time 9535, process 201, arrival.
+At time 9535, process 201, arrives at cpu.
+At time 9570, process 201, exits the cpu.
+At time 9570, process 201, exits the SYSTEM.
+At time 9586, process 200, exits the disk2.
+At time 9586, process 200, arrives at cpu.
+At time 9608, process 202, arrival.
+At time 9619, process 200, exits the cpu.
+At time 9619, process 200, exits the SYSTEM.
+At time 9619, process 202, arrives at cpu.
+At time 9621, process 198, exits the disk1.
+At time 9636, process 203, arrival.
+At time 9660, process 202, exits the cpu.
+At time 9660, process 202, exits the SYSTEM.
+At time 9660, process 198, arrives at cpu.
+At time 9661, process 204, arrival.
+At time 9672, process 198, exits the cpu.
+At time 9672, process 198, exits the SYSTEM.
+At time 9672, process 203, arrives at cpu.
+At time 9699, process 203, exits the cpu.
+At time 9699, process 203, exits the SYSTEM.
+At time 9699, process 204, arrives at cpu.
+At time 9703, process 205, arrival.
+At time 9734, process 204, exits the cpu.
+At time 9734, process 204, exits the SYSTEM.
+At time 9734, process 205, arrives at cpu.
+At time 9742, process 205, exits the cpu.
+At time 9783, process 206, arrival.
+At time 9783, process 206, arrives at cpu.
+At time 9793, process 206, exits the cpu.
+At time 9822, process 207, arrival.
+At time 9822, process 207, arrives at cpu.
+At time 9861, process 208, arrival.
+At time 9865, process 207, exits the cpu.
+At time 9865, process 207, exits the SYSTEM.
+At time 9865, process 208, arrives at cpu.
+At time 9907, process 208, exits the cpu.
+At time 9907, process 208, exits the SYSTEM.
+At time 9938, process 60, exits the network.
+At time 9938, process 60, arrives at cpu.
+At time 9938, process 71, arrives at network.
+At time 9941, process 209, arrival.
+At time 9969, process 60, exits the cpu.
+At time 9969, process 60, arrives at disk1.
+At time 9969, process 209, arrives at cpu.
+At time 9985, process 209, exits the cpu.
+At time 9985, process 209, exits the SYSTEM.
+At time 10000, simulation ENDS.

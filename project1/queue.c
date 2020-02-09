@@ -5,14 +5,6 @@ queue.c - queue implementation (linked-list of nodes) for 4 FIFO queues
 priority queue implementation (sorted list), no re-sorted required after push / pop an event 
 */
 
-// typedef enum {START_SIM, SYSTEM_ARRIVAL, CPU_START, CPU_END, SYSTEM_EXIT, 
-// //                0             1             2        3        4
-// DISK1_ARRIVAL, DISK1_START, DISK1_END, DISK2_ARRIVAL, DISK2_START, DISK2_END, 
-// //      5            6           7          8              9           10
-// NETWORK_ARRIVAL, NETWORK_START, NETWORK_END, END_SIM} TYPES;
-// //      11               12           13        14
-
-// dont need DISK1_ARRIVAL, DISK2_ARRIVAL, NETWORK_ARRIVAL 
 
 typedef enum {START_SIM, PROCESS_ARRIVAL, PROCESS_ARRIVE_CPU, PROCESS_EXIT_CPU, PROCESS_EXIT_SYSTEM, 
 //                0             1                 2                  3                 4
@@ -21,6 +13,7 @@ PROCESS_ARRIVE_DISK1, PROCESS_EXIT_DISK1, PROCESS_ARRIVE_DISK2, PROCESS_EXIT_DIS
 PROCESS_ARRIVE_NETWORK, PROCESS_EXIT_NETWORK, END_SIM} TYPES;
 //     9                        10               11
 
+int pq_count, max_pq_count, cpu_count, max_cpu_count, disk1_count, max_disk1_count, disk2_count, max_disk2_count, network_count, max_network_count; // for QUEUE counts 
 
 struct event{
 // represent an event 
@@ -104,8 +97,9 @@ struct event* dequeue(Queue *queue){
 
   queue->counter = (queue->counter - 1); // decremenent count nodes/ elements in queue 
   free(remove); 
-  
+
   return retval; 
+  
 }
 
 int isEmpty(Queue *queue){
@@ -171,6 +165,7 @@ void pushPQ(Queue *queue, struct event *e){
 
 struct event* popPQ(Queue *queue){
   // list is sorted, pop will always remove the highest priority node, no further sorting required 
+  // never empty 
 
   struct node *n; 
   n = malloc(sizeof(struct node));
@@ -182,6 +177,40 @@ struct event* popPQ(Queue *queue){
 
   return (n->e); // returning a ptr, can free up struct later in main 
 }
+
+
+void get_counts(Queue *pQ, Queue *cpuQ, Queue *disk1Q, Queue *disk2Q, Queue *networkQ){
+// keep counts (global var) every time event is popped 
+
+  pq_count = pq_count + pQ->counter; 
+  cpu_count = cpu_count + cpuQ->counter; 
+  disk1_count = disk1_count + disk1Q->counter; 
+  disk2_count = disk2_count + disk2Q->counter; 
+  network_count = network_count + networkQ->counter; 
+
+  if(pQ->counter > max_pq_count){ 
+    max_pq_count = pQ->counter; 
+    //printf("MAX %d\n", max_pq_count);
+  }
+
+  if(cpuQ->counter > max_cpu_count)
+    max_cpu_count = cpuQ->counter; 
+
+  if(disk1Q->counter > max_disk1_count)
+    max_disk1_count = disk1Q->counter; 
+
+  if(disk2Q->counter > max_disk2_count)
+    max_disk2_count = disk2Q->counter; 
+
+  if(networkQ->counter > max_network_count){
+    max_network_count = networkQ->counter; 
+    //printf("MAX  NET: %d\n", max_network_count);
+  }
+  
+}
+
+
+
 
 
 
