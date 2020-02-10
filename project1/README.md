@@ -23,7 +23,7 @@ a specific event handler is called of the type popped. The handler is responsibl
 generates itself, along with a unique ID), with a new event time, and generating other events if needed as queueing is handled. 
 For example, handle_process_exit_cpu will determine the next state of the process, such as using the disk for I\O. During the event 
 generation and its addition to the priority queue (or enqueuing onto a DISK queue), the CPU component is open for the next 
-event in the cpu queue, and handle_process_exit_cpu is responsible for ALSO generating a process_arrive_cpu event. 
+event in the cpu queue, and handle_process_exit_cpu is responsible for ALSO generating a process_arrive_cpu event. Also to be noted, an open component will have a status of IDLE (ex. cpuQueue->status == 0), allowing for the process to "change its state". 
 
 “At time 354, process 9, exits the cpu.”
 “At time 354, process 4, arrives at cpu.”
