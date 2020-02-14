@@ -61,6 +61,7 @@ void get_counts(Queue *pQ, Queue *cpuQ, Queue *disk1Q, Queue *disk2Q, Queue *net
 
 void read_config_file(FILE *fptrLOG);
 int random_num_between_interval(int min, int max);
+double DOUBLE_random_num_between_interval(double min, double max); 
 
 void init_simulation(Queue *pQ);
 void handle_start_simulation(Queue *pQ, struct event *old);
@@ -75,6 +76,8 @@ void handle_process_arrive_disk2(Queue *pQ, Queue *disk2Q, struct event *old);
 void handle_process_exit_disk2(Queue *pQ, Queue *cpuQ, Queue *disk2Q, struct event *old);
 void handle_process_arrive_network(Queue *pQ, Queue *networkQ, struct event *old);
 void handle_process_exit_network(Queue *pQ, Queue *cpuQ, Queue *networkQ, struct event *old);
+
+void printPQ(Queue *pQ, char *event_types[]); // testing 
 
 
 int main(int args, char *argv[]){
@@ -120,6 +123,8 @@ int main(int args, char *argv[]){
 
   // MAIN LOOP
   while(control){
+
+    // printPQ(pQueue, event_types);
 
     // grab the top priority event
     struct event *current;
@@ -313,6 +318,13 @@ int random_num_between_interval(int min, int max){
   return (min + rand() % (max-min+1)); // [min-max]
 }
 
+double DOUBLE_random_num_between_interval(double min, double max){
+
+  double res = (double)rand()/(double)(RAND_MAX/max);
+  //printf("NUM: %lf\n", res);
+  return res; 
+}
+
 void init_simulation(Queue *pQ){
   // push START_SIM and FIN_TIME onto pQueue
   // START_SIM will be the first event popped
@@ -420,8 +432,10 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
 
   cpuQ->status = 0; // CPU now idle
   int dont_free = 0; // free old event is NOT IN QUEUE
+  double num1 = DOUBLE_random_num_between_interval(0, 1); 
+  double num2 = DOUBLE_random_num_between_interval(0, 1); 
 
-  if((random_num_between_interval(0,1)) < QUIT_PROB){
+  if(num1 < QUIT_PROB){
     // generate PROCESS_EXIT_SYSTEM event
 
     struct event *new_exit_system;
@@ -433,9 +447,9 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
     pushPQ(pQ, new_exit_system);
   }
 
-  else if((random_num_between_interval(0,1)) < NETWORK_PROB){
+  else if(num2 < NETWORK_PROB){
     // go to Network instead of disk
-
+     
     if(networkQ->status == 0 && networkQ->counter == 0){
       // Network is idle AND Network queue is empty
       // generate PROCESS_ARRIVE_NETWORK event
@@ -461,7 +475,7 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
   // GO TO DISK DIRECTLY
   else if(disk1Q->status == 0 && disk1Q->counter == 0){
      // disk queue is empty and disk is idle .. generate new event right away
-
+      
     struct event *new_arrive_disk1;
     new_arrive_disk1 = malloc(sizeof(struct event));
     new_arrive_disk1->type = PROCESS_ARRIVE_DISK1;
@@ -474,7 +488,7 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
 
   else if(disk2Q->status == 0 && disk2Q->counter == 0){
     // disk queue is empty and disk is idle .. generate new event
-
+     
     struct event *new_arrive_disk2;
     new_arrive_disk2 = malloc(sizeof(struct event));
     new_arrive_disk2->type = PROCESS_ARRIVE_DISK2;
@@ -494,7 +508,7 @@ void handle_process_exit_cpu(Queue *pQ, Queue *cpuQ, Queue *networkQ, Queue *dis
 
     else if(disk1Q->counter == disk2Q->counter){
       // queues are equal in size, generate a random num to pick a queue
-
+      
       int num = random_num_between_interval(1, 10);
 
       if(num > 5){
@@ -921,6 +935,18 @@ void get_counts(Queue *pQ, Queue *cpuQ, Queue *disk1Q, Queue *disk2Q, Queue *net
     //printf("MAX  NET: %d\n", max_network_count);
   }
 
+}
+
+void printPQ(Queue *pQ, char *event_types[]){
+
+  struct node *temp; 
+
+    for(temp = pQ->front; temp != 0; temp = temp->next) {
+      char *str = event_types[temp->e->type]; 
+      printf("%d  %d %s \n", temp->e->time, temp->e->id, str);
+    }
+    
+    puts(""); 
 }
 
 
