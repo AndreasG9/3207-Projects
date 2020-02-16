@@ -1,0 +1,204 @@
+wrote in a .docx file, copied to .txt file for reference (looks terribly formatted in a text file) 
+
+
+
+Andreas Gagas
+
+Project 2A: Pseudocode for Implementing a Linux Shell
+
+*** Not confined, will likely change a bunch of implementations 
+
+Note: All parts are encapsulated in “one giant loop” (while(1)), when myshell is “running” and in interactive mode, the screen displays. The program will then check for functionality it supports, such as built-in commands, or I/O redirection. 
+myshell> (commands will go here) 
+
+When myshell is “running” and in batch mode, the program will accept a single argument
+myshell> batch.txt 
+(see details below) 
+
+Any more arguments and an error will be displayed. 
+
+Parse 							char** get_user_input(); 
+________________________________________
+Start small, parse the user input commands, when in interactive mode 
+ 
+Initialize: 
+char *line, *res = NULL; 
+size_t len = 0; 
+ssize_t read = -1;
+char **tokens = (char **) malloc(size of(char *) * some size);  
+char delimiters[] = “  \n\t”; 
+int i = 0; 
+
+Loop: grab the line, split the string with every “ “/ newline/tab, store, and stop when reach last delimiter
+read = getline(&line, &len, stdin) 
+token[i] = strtok(line, delimiters);
+while(token[i] != NULL)
+	++i
+	token[i] = strtok(NULL, delimiters); 
+	 
+return tokens; 
+… 
+Back in main: 
+//char **input = (char **) malloc(size of(char *) * some size);  
+char **input = get_user_input(); 
+I will likely just treat input as an array, and use array indexing (ex. input[0]). 
+
+Internal Commands (priority over external commands) 
+________________________________________
+Note: for internal commands, the shell will NOT create a process. 
+char *commands = {“cd”, “clr”, “dir”, “environ”, “echo”, “help”, “pause”, “quit”}; 
+
+int is_built_in_comand (char **input, char* commands){
+	check input[0] against all possible built-in commands 
+
+	for(from i is 0 to num of build-in commands)
+		int retval = strcmp(input[0], commands[i] 
+		if(retval == 0)
+			return 1; 
+	return 0; 
+}
+
+Main: If the return values is 1, call function: call_built_in_commands(input), to call the appropriate function.
+
+o	cd										 
+void cd(char **input){
+Change the current directory to <directory> 
+
+	if(arg passed is 0 or greater than 1)
+		print error message , return 
+	
+	
+	int retval = chdir(input[1]); 
+
+	if(retval equals -1)
+		print error message, return  
+}
+
+o	clr
+void clr(char **input){
+Clear the screen
+
+if (input[0] equals “clr”) 
+	 print x amount of newline characters 
+
+o	dir										 
+void dir(char **input){
+Print/list files or folders in that directory 
+	
+	user struct DIR ?? 
+	get the current working directory 
+	
+TODO: stdout redirection 
+}
+
+o	environ										 
+void environ(){
+Print/ list environment strings 
+
+		
+
+TODO: stdout redirection 
+}
+
+o	echo										 
+void echo(…){
+echo <comment>, print the comment 
+	
+	intit variables (char *line, *res, size_t len, … ) for use with getline(…)
+	
+	while(read = getline(store in line, store in len, read from stdin) 
+		print the entire line (maybe trim excess spaces) 
+		print new line, free(line), reset variables 
+
+TODO: stdout redirection 
+}
+
+o	help
+void help(char **input){
+Display the entire Simple Manual 
+
+	see Documentation / Simple Manual at bottom 
+
+
+TODO: stdout redirection 
+}
+
+o	pause
+void pause(char **input){
+“Pause” use of shell, until “enter” is read from stdin 
+
+	char *unpause = “enter”;
+	int retval = 0; 
+	char buffer[some size]; 
+
+while(fgets (buffer, 6, stdin)) != NULL )
+	retval = strcmp(unpause, buffer);
+	if(retval is 0, strings match)
+		break; 
+}
+
+o	exit
+void exit(char **input){
+Exit/ quit the shell  
+
+	call exit(0)   
+}
+o	path
+void path(char **input){
+Input[0] contains the command name path, the rest of the arguments belong to the newly specified path. 
+
+}
+
+External Commands 
+________________________________________
+is_built_in_command() returns 0,  use system calls fork() and exec(), to launch as an external program. 
+
+void run_external_command(char **input){
+int pid = fork(); // create child process 
+if(pid = -1)
+	    error, return 
+else if(pid == 0)
+ 	    int retval = execvp(input[0], input); // run child process, returns nothing if successfull
+    if(retval == -1)
+	error 
+else
+    int wc = wait(NULL); // child process should finish first 
+}
+
+TODO: I/O 
+use dup2() 
+
+Input Redirection <
+________________________________________
+int input_redirection(char **input) {
+Instead of reading from stdin, take (redirect) input from some file (program < read_from_this.txt) 	
+	[program name]     ‘<’        [input file]
+	      input[0]        input[1]      input[2] 
+
+	
+
+}
+
+Output Redirection >  
+________________________________________  Redirect the output to some file (new, or truncate existing file) 
+
+
+Output Redirection >  >>  
+________________________________________
+Redirect the output to some file (new, or append to the end / not overwritte) 
+
+
+Parallel Commands / Piping 
+________________________________________
+
+
+Error Catching?? 
+________________________________________
+
+Documentation / Simple Manual 
+________________________________________
+
+
+
+
+
