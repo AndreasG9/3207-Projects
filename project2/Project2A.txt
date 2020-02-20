@@ -1,26 +1,30 @@
-wrote in a .docx file, copied to .txt file for reference (looks terribly formatted in a text file) 
-
-
-
 Andreas Gagas
 
 Project 2A: Pseudocode for Implementing a Linux Shell
 
 *** Not confined, will likely change a bunch of implementations 
 
-Note: All parts are encapsulated in “one giant loop” (while(1)), when myshell is “running” and in interactive mode, the screen displays. The program will then check for functionality it supports, such as built-in commands, or I/O redirection. 
-myshell> (commands will go here) 
-
-When myshell is “running” and in batch mode, the program will accept a single argument
-myshell> batch.txt 
-(see details below) 
-
-Any more arguments and an error will be displayed. 
-
-Parse 							char** get_user_input(); 
+Rough outline (details below other headers) 
 ________________________________________
-Start small, parse the user input commands, when in interactive mode 
- 
+char *commands[] = {“cd”, “clr”, “dir”, “environ”, “echo”, “help”, “pause”, “quit”}; 
+char *input_file, *output_file, *p_input. char *p_output; 
+while(1) {
+1.	If you run myshell.c exe with a batch file, (2 args), don’t call get_user_input(), and instead read from the file and store input in tokens. Run through the same steps (ignore 2. 3.), but after completion EXIT the loop 
+2.	(interactive mode) 	myshell> (commands will go here) 
+3.	char ** get_user_input(); // return a a double ptr to array of ptrs to strings, based on user input, will likely remove “blank” entries 
+4.	int is_built_in_comand (char **input, char* commands); // check if input includes internal command
+5.	bunch of if /else if, to call appropriate command, these funcs will have further error checks , and redirection if noted for some of the funcs. 
+6.	int check_for_redirection(input, input_file_output_file); Store the new input / output file, which will be the new fd . Return 0, 1, 2, 3, or 4 indicating if 
+there is none/error, ‘>’, ‘<’, ‘>>’  or BOTH. 
+7.	int check_for_control_operator(input) ; // return 1 for yes, can put this func inside run_external_command(). 
+8.	NOT internal, its external, void run_external_command(char **input, char *input_file, char *output_file, other checks int values … ) to execute. call check_for_piping(…), to see if need to create a pipe between two processes. Before the child process is exec, use result of check_for_redirection to change any of the fd if needed  (use dup2(old, new)), based on input_file / output_file modified in check_for_redirection. If & were present, loop to fork n amount of processes, use wait() for the child process to finish if a & was found. 
+
+9.	continue loop until exit 
+
+Tokenize 						char** get_user_input(); 
+________________________________________
+Start small, tokenize the user input commands, when in interactive mode 
+
 Initialize: 
 char *line, *res = NULL; 
 size_t len = 0; 
@@ -35,19 +39,23 @@ token[i] = strtok(line, delimiters);
 while(token[i] != NULL)
 	++i
 	token[i] = strtok(NULL, delimiters); 
-	 
 return tokens; 
 … 
 Back in main: 
-//char **input = (char **) malloc(size of(char *) * some size);  
 char **input = get_user_input(); 
-I will likely just treat input as an array, and use array indexing (ex. input[0]). 
+I will likely just treat input as an array, and use array indexing (ex. input[0], should reference the command name). Also, I will need to trim the array if the user entered a bunch of spaces between commands. Which will require shortening the length with the use of a loop, and temp strings. 
+
+
+
+Read Batch File
+________________________________________
+char **tokens = (char **) malloc(size of(char *) * some size);  
+Same initizliation as Tokenize , but instead of  reading from stdin for getline(), read from the batch file argc[1]. 
 
 Internal Commands (priority over external commands) 
 ________________________________________
-Note: for internal commands, the shell will NOT create a process. 
-char *commands = {“cd”, “clr”, “dir”, “environ”, “echo”, “help”, “pause”, “quit”}; 
-
+Note: for internal commands, the shell will NOT create a process. Also, they have their own implementation of output redirection. 
+char *commands[] = {“cd”, “clr”, “dir”, “environ”, “echo”, “help”, “pause”, “quit”}; 
 int is_built_in_comand (char **input, char* commands){
 	check input[0] against all possible built-in commands 
 
@@ -55,18 +63,19 @@ int is_built_in_comand (char **input, char* commands){
 		int retval = strcmp(input[0], commands[i] 
 		if(retval == 0)
 			return 1; 
-	return 0; 
+	return 0; / internal or invalid 
 }
 
-Main: If the return values is 1, call function: call_built_in_commands(input), to call the appropriate function.
+Main: If the return values is 1, call function: call_built_in_commands(input), to call the appropriate function, OR various if / else if to match commands and call separate functions. 
+call function: check_for_redirection ( … ), even though the function will check for none, input, output, and both redirections,  I only care about none or output redirections. 
 
 o	cd										 
 void cd(char **input){
 Change the current directory to <directory> 
+input[0] is “cd”, input[1] is location  
 
 	if(arg passed is 0 or greater than 1)
 		print error message , return 
-	
 	
 	int retval = chdir(input[1]); 
 
@@ -78,127 +87,193 @@ o	clr
 void clr(char **input){
 Clear the screen
 
-if (input[0] equals “clr”) 
+if (input[1] equals “clr”) 
 	 print x amount of newline characters 
+OR 	printf("\033[H\033[2J");
 
 o	dir										 
 void dir(char **input){
 Print/list files or folders in that directory 
+
+Error check: 0 or 1 args, if 0 print from cwd 
+char *name = malloc(sizeof(char) * some max); 
+	if(0 args)
+	    name = get_current_dir_name(); 
+ 	else if (args is 1) 
+	    name = input[1] 
+	else 
+	    print error, return 
+
+	DIR *directory = NULL;
+	struct dirent *directory_entry = NULL; 
+	directory = opendir(name); 
+
+	int output_file; 
+	int retval = check_for_redirection(input, output_file, NULL) // if the return is 2, indicates ‘>’ is present, and the output-file will contain the specified outputfile. 
+
+	if(directory == NULL)
+	    print error, return 
 	
-	user struct DIR ?? 
-	get the current working directory 
-	
-TODO: stdout redirection 
+	// read from that directory 
+	if(directory != NULL)
+		while(directory_entry = readdir(directory))
+			if(retval equals 1/ ‘<’ present)
+			int new_out = open(output_file, for writing) 
+			dup2(new_out, 1); 
+			
+			else just print to stdout  
+	close both ptrs 	
 }
 
 o	environ										 
 void environ(){
 Print/ list environment strings 
+ int output_file; 
+int retval = check_for_redirection(input, output_file, NULL) // if the return is 2, indicates ‘>’ is present, and the output-file will contain the specified outputfile. 
 
-		
-
-TODO: stdout redirection 
+	char * evar1 = getenv(“USER); 
+	char *envar2 = getenv(“PATH”); 
+	 “HOME” … others 
+	if(retval equals 2/ ‘>’)
+	    int new_out = open(output_file for writing)
+	    dup2(new_out, 1); 
+	else
+	    print to stdout / to the screen envar1 , evar2, etc … 
 }
 
 o	echo										 
-void echo(…){
-echo <comment>, print the comment 
+void echo(char **input){
+echo <comment>, print the comment (accepts 0 or more arguments)  
 	
 	intit variables (char *line, *res, size_t len, … ) for use with getline(…)
-	
+
+	int output_file; 
+	else if(check_for_redirection() equals a value equating to ‘>’  
+		 int new_out = open(output_file, for writing)
+		dup2(new_out, 1) 
+	else{
 	while(read = getline(store in line, store in len, read from stdin) 
 		print the entire line (maybe trim excess spaces) 
 		print new line, free(line), reset variables 
-
-TODO: stdout redirection 
 }
-
 o	help
 void help(char **input){
-Display the entire Simple Manual 
+Display the entire Simple Manual, only 1 argument help
 
-	see Documentation / Simple Manual at bottom 
+	if(more than 1 args, print stderr, too many args) 
+		
+	int output_file; 
+	if(check_for_redirection() returns a value indicating an input has ‘>’) 
+	    int new_out = open(output_file, for writing)
+	    dup2(new_out, 1); 	
 
-
-TODO: stdout redirection 
+	else 
+	    print the Documentation / Simple Manual to the screen (read from a txt file) 
 }
 
 o	pause
 void pause(char **input){
-“Pause” use of shell, until “enter” is read from stdin 
-
-	char *unpause = “enter”;
-	int retval = 0; 
-	char buffer[some size]; 
-
-while(fgets (buffer, 6, stdin)) != NULL )
-	retval = strcmp(unpause, buffer);
-	if(retval is 0, strings match)
-		break; 
+“Pause” use of shell, until user hits enter (‘\n’) 
+ 
+int retval = 0;
+while(int = getchar() != ‘\n’)
+	continue; 
 }
-
 o	exit
 void exit(char **input){
 Exit/ quit the shell  
 
+free(input); 
 	call exit(0)   
 }
-o	path
-void path(char **input){
-Input[0] contains the command name path, the rest of the arguments belong to the newly specified path. 
+Check for Redirection
+________________________________________
+int check_for_redirection(char **input, char*input_file, char*output_file){
+Tokens contain the parsed user input. Use strcmp or strstr to check for ‘>’, ‘<’, ‘>>’., myshell should support the use of both redirections. If found, we want to store the input[i+1] to either the input_file or output_file, depending on which symbol was found. Error to make sure that string is valid, not another ‘>’ or ‘&’. 
+Return a value to main(0, 1, 2, 3, or 4). Note: built in commands have their own implementation as they only need to support OUTPUT redirection, but I’ll still use this function to check for ‘>’. 
+Redirection will be implemented inside run external command function, with the use of the stored input/ output file to change the fd. 
+}
 
+Check for & 
+________________________________________
+int check_for_control_operator(input) {
+	input[0] is command, ever other even index  can have an & 
+	
+	for( i from 2 to num of args) // or start backwards , need to verify only 1 & 
+	    if(input[i] equals ‘&’, return 1;
+	return 0; 
+}
+
+Check for Piping between 2 processes 
+________________________________________
+Called inside external command function 
+int check_for_piping(char **input,  char* p_input. char *p_output ){
+Error catch if input[0] equals ‘|’, or another even index equals ‘|’ 
+
+for(i is 0 to length of input)
+if input[i] equals ‘|’, store and check [i-1] and [i+1] are not invalid, return 1
+return 0; 
 }
 
 External Commands 
 ________________________________________
-is_built_in_command() returns 0,  use system calls fork() and exec(), to launch as an external program. 
+is_built_in_command() returns 0,  use system calls fork() and exec(), to launch as an external program. Handle possible redirection, and piping between programs. There will likely be a ton of different error checks, to be implementation during development. 
 
-void run_external_command(char **input){
+void run_external_command(char **input, bunch of other stuff like new input / new output file is redirection is present … ){
+int new_in, new_out; 
+
+	call int check_for_piping(char **input)
+	If return is 1 create a pipe  int pipefd[2], pipe(pipefd), 
+
 int pid = fork(); // create child process 
 if(pid = -1)
 	    error, return 
 else if(pid == 0)
- 	    int retval = execvp(input[0], input); // run child process, returns nothing if successfull
-    if(retval == -1)
-	error 
-else
-    int wc = wait(NULL); // child process should finish first 
+	if(piping present)
+		dup2(pipefd[0], 0) // replace stdin with write to pipe 
+		close input side pipe   
+	if( < input redirection present) 
+		new_in = open(input_file for reading) 
+		dup2(new_int, 0) 
+	if( > output redirection present)
+		new_out = open(output_file for writing) 
+		dup2(new_out, 1)
+		if(>> redirection present)
+			new_out = open(output_file for writing/ appending, don’t truncate) 
+		if(both < and > redirection present) ?? maybe this will work 
+			new_in = open(input_file for reading)
+			new_out = open(output_file for writing)
+			dup2(new_in, 0), dup2(new_out, 1) 
+		if( & )
+		   I want to loop through the input and keep using fork()
+
+int retval = execvp(input[0], input); // finally, run child process, returns nothing if successfull
+    	if(retval == -1)
+		error 
+else 
+	if(piping present)
+	    dup2(pipefd[1], 1) and close right side pipe 		    
+	    execvp(input[2], input) // or wherever the second process is located 
+
+if(& control operator present)
+ int wc = wait(NULL); // child process should finish first
 }
-
-TODO: I/O 
-use dup2() 
-
-Input Redirection <
-________________________________________
-int input_redirection(char **input) {
-Instead of reading from stdin, take (redirect) input from some file (program < read_from_this.txt) 	
-	[program name]     ‘<’        [input file]
-	      input[0]        input[1]      input[2] 
-
-	
-
-}
-
-Output Redirection >  
-________________________________________  Redirect the output to some file (new, or truncate existing file) 
-
-
-Output Redirection >  >>  
-________________________________________
-Redirect the output to some file (new, or append to the end / not overwritte) 
-
-
-Parallel Commands / Piping 
-________________________________________
-
-
-Error Catching?? 
-________________________________________
 
 Documentation / Simple Manual 
 ________________________________________
+… 
+Welcome to myshell 
 
+=========Built-In Commands================
+cd <directory> 
+clr 
+dir <directory> 
+environ
+echo <comment>
+quit
+=========Internal Commands================
+…
+=========… ================
 
-
-
+… WILL ADD LATER 
 
