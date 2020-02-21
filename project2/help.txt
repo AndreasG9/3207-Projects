@@ -1,0 +1,30 @@
+Welcome to myshell 
+=========Built-In Commands================
+cd <directory> 		change current directory
+clr 				clears the screen 
+dir <directory> 		print files in specified directory to stdout or redirected to file 
+environ			print environment variables to stdout or redirected to file 
+echo <comment>		print <comment / s > … to stdout or redirected to file 
+quit				exit the shell 
+
+=========External Command ================
+… long list
+=========Supported Functionality ================
+•	Input redirection
+	  - program < get_input_from_here.txt 
+•	Output redirection
+    - program > output__to_here.txt
+•	Append output redirection
+    - program > output_to_the_end_here.txt
+•	BOTH 
+    - program < get_input_from_here.txt > output__to_here.txt
+•	Piping between 2 processes 
+    - program1 | program2 (program 1 output will input for program2) 
+•	Background execution of processes
+    - program 1 & program 2 & program 3 (execute at once in background) 
+•	 output, both redirection, and append output
+•	Able to include a batch.txt file of commands 
+
+
+ WILL ADD MORE DETAIL 
+
