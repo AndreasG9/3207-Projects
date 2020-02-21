@@ -9,17 +9,21 @@ ________________________________________
 char *commands[] = {“cd”, “clr”, “dir”, “environ”, “echo”, “help”, “pause”, “quit”}; 
 char *input_file, *output_file, *p_input. char *p_output; 
 while(1) {
-1.	If you run myshell.c exe with a batch file, (2 args), don’t call get_user_input(), and instead read from the file and store input in tokens. Run through the same steps (ignore 2. 3.), but after completion EXIT the loop 
+1.	If you run myshell.c exe with a batch file, (2 args), don’t call get_user_input(), and instead read from the file and store input in tokens. Run through the same steps (ignore 2. 3.), multiple commands, so loop appropriately when run_external _command, and finally after completion EXIT the loop 
 2.	(interactive mode) 	myshell> (commands will go here) 
-3.	char ** get_user_input(); // return a a double ptr to array of ptrs to strings, based on user input, will likely remove “blank” entries 
-4.	int is_built_in_comand (char **input, char* commands); // check if input includes internal command
-5.	bunch of if /else if, to call appropriate command, these funcs will have further error checks , and redirection if noted for some of the funcs. 
-6.	int check_for_redirection(input, input_file_output_file); Store the new input / output file, which will be the new fd . Return 0, 1, 2, 3, or 4 indicating if 
+3.	char ** get_user_input(); // return a a double ptr to an array of ptrs to strings, based on user input, will likely remove “blank” entries inside this function. 
+4.	Quick error check, before later parsing, the input cannot start or end with any redirection, piping, control, or ‘-‘ symbol. 
+5.	int is_built_in_comand (char **input, char* commands); // check if input includes internal command
+6.	bunch of if /else if, to call appropriate command, these funcs will have further error checks , and redirection if noted for some of the funcs. Redirection will be implemented directly inside that function. 
+7.	Else, its an external command 
+8.	void group_command_argument(char **input). I will need to group the command and argument into a single string / single index if present. 
+For example. {“ls”, “-la”, “>” …}   {“ls -la” ,…} for execution later.  
+9.	int check_for_redirection(input, input_file_output_file); Store the new input / output file, which will be the new fd . Return 0, 1, 2, 3, or 4 indicating if 
 there is none/error, ‘>’, ‘<’, ‘>>’  or BOTH. 
-7.	int check_for_control_operator(input) ; // return 1 for yes, can put this func inside run_external_command(). 
-8.	NOT internal, its external, void run_external_command(char **input, char *input_file, char *output_file, other checks int values … ) to execute. call check_for_piping(…), to see if need to create a pipe between two processes. Before the child process is exec, use result of check_for_redirection to change any of the fd if needed  (use dup2(old, new)), based on input_file / output_file modified in check_for_redirection. If & were present, loop to fork n amount of processes, use wait() for the child process to finish if a & was found. 
+10.	called void run_external_command(char **input, char *input_file, char *output_file, other checks int values … ) to execute. call check_for_piping(…), to see if need to create a pipe between two processes. call int check_for_control_operator(input) , to see if we need to do n about of forks and wait calls. Before the child process is exec, use result of check_for_redirection to change any of the fd if needed  (use dup2(old, new)), based on input_file / output_file modified in check_for_redirection. If & were present, loop to fork n amount of processes, use wait() for the child process to finish if a & was found. Also, replace the the right side of pipe(to be read from) with the second process, run that process. 
 
-9.	continue loop until exit 
+11.	continue loop until quit command is called 
+
 
 Tokenize 						char** get_user_input(); 
 ________________________________________
@@ -44,9 +48,6 @@ return tokens;
 Back in main: 
 char **input = get_user_input(); 
 I will likely just treat input as an array, and use array indexing (ex. input[0], should reference the command name). Also, I will need to trim the array if the user entered a bunch of spaces between commands. Which will require shortening the length with the use of a loop, and temp strings. 
-
-
-
 Read Batch File
 ________________________________________
 char **tokens = (char **) malloc(size of(char *) * some size);  
@@ -186,10 +187,21 @@ Exit/ quit the shell
 free(input); 
 	call exit(0)   
 }
+void path(char **input){
+	I guess I need to use the setenv function 
+loop (from i is 1 to strins in input)
+setenv PATH  “[input[i]]:” 
+}
+Group / further Parsing 
+________________________________________
+Assuming I trimmed excess whitespace input and a leading or ending redirection, piping, control, or ‘-‘ symbol, I will need to group a command and argument into a single input, regardless if the argument is invalid (wont know until execution). 
+void group_command_argument(char **input){
+	use strstr() to search for ‘-‘, if found note its index in input. Combine the previous index with that index, which will requiring moving the other inputs down an index. I should have now an {“command argument”, …}, inside a single string in the array. 
+}
 Check for Redirection
 ________________________________________
 int check_for_redirection(char **input, char*input_file, char*output_file){
-Tokens contain the parsed user input. Use strcmp or strstr to check for ‘>’, ‘<’, ‘>>’., myshell should support the use of both redirections. If found, we want to store the input[i+1] to either the input_file or output_file, depending on which symbol was found. Error to make sure that string is valid, not another ‘>’ or ‘&’. 
+Tokens contain the parsed user input. Use strcmp or strstr to check for ‘>’, ‘<’, ‘>>’., myshell should support the use of both redirections. If found, we want to store the input[i+1] to either the input_file or output_file, depending on which symbol was found. Error to make sure that string is valid, not another ‘>’ or ‘&’. The contents to the left of the redirection symbol are command and arguments (if present). 
 Return a value to main(0, 1, 2, 3, or 4). Note: built in commands have their own implementation as they only need to support OUTPUT redirection, but I’ll still use this function to check for ‘>’. 
 Redirection will be implemented inside run external command function, with the use of the stored input/ output file to change the fd. 
 }
@@ -220,10 +232,14 @@ ________________________________________
 is_built_in_command() returns 0,  use system calls fork() and exec(), to launch as an external program. Handle possible redirection, and piping between programs. There will likely be a ton of different error checks, to be implementation during development. 
 
 void run_external_command(char **input, bunch of other stuff like new input / new output file is redirection is present … ){
+At this point, input[0] will contain the command and argument if present. If there is a type of redirection or piping the necessary new file / files was passed. (still have to figure out, batch mode, I know I will need to loop through the multilitude of commands, but I don’t want to interfere with ineractive mode execution of internal commands). 
+
 int new_in, new_out; 
 
 	call int check_for_piping(char **input)
 	If return is 1 create a pipe  int pipefd[2], pipe(pipefd), 
+	
+	call int check_for_control_operator(char **input) 
 
 int pid = fork(); // create child process 
 if(pid = -1)
@@ -232,10 +248,10 @@ else if(pid == 0)
 	if(piping present)
 		dup2(pipefd[0], 0) // replace stdin with write to pipe 
 		close input side pipe   
-	if( < input redirection present) 
+	if( < only input redirection present) 
 		new_in = open(input_file for reading) 
 		dup2(new_int, 0) 
-	if( > output redirection present)
+	if( > only output redirection present)
 		new_out = open(output_file for writing) 
 		dup2(new_out, 1)
 		if(>> redirection present)
@@ -247,7 +263,7 @@ else if(pid == 0)
 		if( & )
 		   I want to loop through the input and keep using fork()
 
-int retval = execvp(input[0], input); // finally, run child process, returns nothing if successfull
+int retval = execvp(input[0], input); // finally, run child process, returns nothing if successful. If there are arguments, I need to group them into a single string, ex. ls -la should be input[0]. 
     	if(retval == -1)
 		error 
 else 
@@ -261,19 +277,32 @@ if(& control operator present)
 
 Documentation / Simple Manual 
 ________________________________________
-… 
+stored inside help.txt, help() will read from this file. 
+
 Welcome to myshell 
-
 =========Built-In Commands================
-cd <directory> 
-clr 
-dir <directory> 
-environ
-echo <comment>
-quit
-=========Internal Commands================
-…
-=========… ================
+cd <directory> 		change current directory
+clr 				clears the screen 
+dir <directory> 		print files in specified directory to stdout or redirected to file 
+environ			print environment variables to stdout or redirected to file 
+echo <comment>		print <comment / s > … to stdout or redirected to file 
+quit				exit the shell 
 
-… WILL ADD LATER 
-
+=========External Command ================
+… long list
+=========Supported Functionality ================
+•	Input redirection
+o	program < get_input_from_here.txt 
+•	Output redirection
+o	program > output__to_here.txt
+•	Append output redirection
+o	program > output_to_the_end_here.txt
+•	BOTH 
+o	program < get_input_from_here.txt > output__to_here.txt
+•	Piping between 2 processes 
+o	program1 | program2 (program 1 output will input for program2) 
+•	Background execution of processes
+o	program 1 & program 2 & program 3 (execute at once in background) 
+•	 output, both redirection, and append output
+•	Able to include a batch.txt file of commands 
+ WILL ADD MORE DETAIL 
