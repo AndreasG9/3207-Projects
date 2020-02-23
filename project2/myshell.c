@@ -11,7 +11,9 @@ myshell.c - Developing a Linux Shell
 #include <unistd.h>
 #include <dirent.h> 
 #include <sys/types.h>
-#include<sys/wait.h> 
+#include <sys/wait.h> 
+#include <sys/stat.h>
+#include <fcntl.h>
 // ... 
 
 char** get_user_input(); 
@@ -28,25 +30,29 @@ int help(char **input);
 int pause_(char **input); 
 int quit(char **input);
 // path 
-void group_command_argument(char **input); 
-int check_for_redirection(char **input, char *new_input, char *new_output); 
+void group_command_option(char **input); 
+//int check_for_redirection(char **input, char *new_input, char *new_output); 
+int check_for_redirection(char **input); 
 
 
 void run_external_command(char **input); // add all those params 
 
 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
-
- 
+char *input_file, *output_file, *p_input, *p_output; 
 int input_argc; 
+
 
 int main(int argc, char *argv[]){
 
   //char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
-  char *new_input_file, *new_output_file, *p_input, *p_output = NULL; 
+  //char *new_input_file, *new_output_file, *p_input, *p_output = NULL; 
+  //new_input_file, new_output_file, p_input, p_output = NULL;
 
-  char **input = NULL; 
+  input_file, output_file, p_input, p_output = NULL;  
   input_argc = 0; 
+
+  char **input = NULL; // input argc[]
   
   int batch_present = 0; 
 
@@ -86,6 +92,7 @@ int main(int argc, char *argv[]){
 
    // trim_spaces(input); // remove blank entries if present 
 
+
     int built_in =  is_built_in_command(input); 
     //printf("built-in: %d\n", built_in); 
 
@@ -120,7 +127,7 @@ int main(int argc, char *argv[]){
     if(successful == 1)
       continue; 
 
-    int redirection_present = check_for_redirection(input, new_input_file, new_output_file); 
+    //int redirection_present = check_for_redirection(input, new_input_file, new_output_file); 
 
     // execute external command 
 
@@ -306,23 +313,40 @@ return 0;
 
 
 int environ(char **input){
-  // list env strings 
-  // supports output redirection 
+  // list env strings, supports output redirection 
 
-  if(input_argc > 0){
+  int output_redirection = check_for_redirection(input); 
+  //printf("%s", outut_redirection); 
+  
+  if((input_argc > 1) && output_redirection != 1){
     fprintf(stderr, "%s \n", "-myshell: error, environ takes no args");
     return 1; 
   }
-  
-  // check for redirection 
+
+  if(output_redirection == 2) // error warning already printed 
+    return 1; 
 
   char *envar1, *envar2, *envar3 = NULL; 
   envar1 = getenv("USER");
   envar2 = getenv("PATH"); 
   envar3 = getenv("HOME"); 
 
-  printf("USER: %s\n\nPATH: %s\n\nHOME: %s\n\n", envar1, envar2, envar3); 
+  if(output_redirection == 5)
+    printf("USER: %s\n\nPATH: %s\n\nHOME: %s\n\n", envar1, envar2, envar3); 
 
+  else{
+    // output redirection
+
+    FILE *fptr = fopen(output_file, "w"); 
+
+    if(fptr == NULL){
+      fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      return 1; 
+    }
+
+    fprintf(fptr, "%s%s\n\n%s%s\n\n%s%s\n\n", "USER: ", envar1, "PATH: ", envar2, "HOME: ", envar3); // write to file 
+    fclose(fptr); 
+  }
   return 0; 
 }
 
@@ -330,16 +354,32 @@ int echo(char **input){
   // echo <comment> 
   // support output redirection 
 
-  int output_file; 
+  int output_redirection = check_for_redirection(input); 
 
-  // check for redirection 
-
-  // else{ 
-  for(int i = 1; i<(input_argc); ++i){
+  if(output_redirection == 5){
+    // print to stdout 
+  for(int i = 1; i<(input_argc); ++i)
     printf("%s ", input[i]); 
-  }
 
   puts(""); 
+  }
+
+  else{
+    // output redirection 
+
+    FILE *fptr = fopen(output_file, "w"); 
+
+    if(fptr == NULL){
+      fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      return 1; 
+    }
+
+    for(int i = 1; strcmp(input[i], ">") != 0; ++i)
+      fprintf(fptr, "%s ", input[i]); 
+    fprintf(fptr, "%s ", "\n"); 
+
+    fclose(fptr); 
+  }
 
   return 0; 
 }
@@ -378,50 +418,61 @@ int quit(char **input){
   return 0; 
 }
 
-void group_command_argument(char **input){
+void group_command_option(char **input){
   // ... 
 
   
 }
 
-int check_for_redirection(char **input, char *new_input, char *new_output){
+int check_for_redirection(char **input){ 
+//int check_for_redirection(char **input, char *new_input, char *new_output){
   // "<", ">", ">>"
 
   // fix return value 
 
   //char *symbols[] = {"<", ">", ">>"}; 
 
+
   for(int i=1; i<input_argc; ++i){
     // iterate through inputs
 
-    if(strcmp(input[i], "<") == 0){
-      // store the next arg (to the right)
-      new_input = input[i+1]; 
+    // if(strcmp(input[i], "<") == 0){
+    //   // store the next arg (to the right)
+    //   //new_input = input[i+1]; 
+      
+    //   //printf("inside redirection, new in: %s\n", new_input); 
 
-      if((strcmp(new_input, ">") == 0 || strcmp(new_input, ">") == 0) || strcmp(new_input, ">>") == 0 || 
-         strcmp(new_input, "|") == 0 || strcmp(new_input, "&") == 0){
+    //   if((strcmp(new_input, ">") == 0 || strcmp(new_input, ">") == 0) || strcmp(new_input, ">>") == 0 || 
+    //      strcmp(new_input, "|") == 0 || strcmp(new_input, "&") == 0){
 
-         fprintf(stderr, "%s \n", "-myshell: error, < requires input file");
-          }
-    }
+    //      fprintf(stderr, "%s \n", "-myshell: error, < requires input file");
+    //      return 2; 
+    //       }
+    //   return 0; 
+    // }
 
-     else if(strcmp(input[i], ">") == 0){
-         new_output = input[i+1]; 
+     if(strcmp(input[i], ">") == 0){
+         output_file = input[i+1]; 
+        //printf("inside redirection, new out: %s\n", output_file); 
 
-         if((strcmp(new_input, ">") == 0 || strcmp(new_input, ">" == 0) || strcmp(new_input, ">>" == 0 || 
-           strcmp(new_input, "|") == 0 || strcmp(new_input, "&") == 0){
+      if((strcmp(output_file, ">") == 0 || strcmp(output_file, ">") == 0) || strcmp(output_file, ">>") == 0 || 
+         strcmp(output_file, "|") == 0 || strcmp(output_file, "&") == 0){
 
-          fprintf(stderr, "%s \n", "-myshell: error, > requires input file");
+          fprintf(stderr, "%s \n", "-myshell: error, > requires output file");
+          return 2; 
            }
 
-      else if(strcmp(input[i], ">>") == 0){
-          new_output = input[i+1]; 
+        return 1; 
+     }
 
-    }
+    //   else if(strcmp(input[i], ">>") == 0){
+    //       new_output = input[i+1]; 
+
+    // }
 
     //else if(strcmp(input[0], "clr") == 0)
-
-return 0; 
+  }
+  return 5; // no redirection 
 }
 
 
