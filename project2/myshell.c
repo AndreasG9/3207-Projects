@@ -11,6 +11,7 @@ myshell.c - Developing a Linux Shell
 #include <unistd.h>
 #include <dirent.h> 
 #include <sys/types.h>
+#include<sys/wait.h> 
 // ... 
 
 char** get_user_input(); 
@@ -22,23 +23,32 @@ int cd(char **input);
 int clr(char **input); 
 int dir(char **input); 
 int environ(char **input); 
+int echo(char **input); 
+int help(char **input); 
+int pause_(char **input); 
+int quit(char **input);
+// path 
+void group_command_argument(char **input); 
+int check_for_redirection(char **input, char *new_input, char *new_output); 
+
+
+void run_external_command(char **input); // add all those params 
+
 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
 
-//int check_for_redirection(char **input, char *new_input, char *new_output); 
  
 int input_argc; 
 
 int main(int argc, char *argv[]){
 
   //char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
-  char *input_file, *output_file, *p_input, *p_output = NULL; 
+  char *new_input_file, *new_output_file, *p_input, *p_output = NULL; 
 
   char **input = NULL; 
   input_argc = 0; 
   
   int batch_present = 0; 
-
 
   if(argc == 2)
     batch_present = 1; 
@@ -94,19 +104,32 @@ int main(int argc, char *argv[]){
     else if(strcmp(input[0], "environ") == 0)
       successful = environ(input); 
 
+    else if(strcmp(input[0], "echo") == 0)
+      successful = echo(input); 
 
+    else if(strcmp(input[0], "help") == 0)
+      successful = help(input); 
 
+    else if(strcmp(input[0], "pause") == 0)
+      successful = pause_(input); 
 
+    else if(strcmp(input[0], "quit") == 0)
+      successful = quit(input); 
 
-
-    if(successful == 1){
-      // built-in call not succesful, continue 
+    // built-in call not succesful, continue
+    if(successful == 1)
       continue; 
-    }
+
+    int redirection_present = check_for_redirection(input, new_input_file, new_output_file); 
+
+    // execute external command 
+
+    //run_external_command(input); 
+
 
     break; 
 
-    }
+  }
 
   return 0; 
 }
@@ -140,6 +163,7 @@ char** get_user_input(void){
 }
 
 char ** read_batch_file(){
+// TODO 
 
   return 0; 
 }
@@ -301,6 +325,126 @@ int environ(char **input){
 
   return 0; 
 }
+
+int echo(char **input){
+  // echo <comment> 
+  // support output redirection 
+
+  int output_file; 
+
+  // check for redirection 
+
+  // else{ 
+  for(int i = 1; i<(input_argc); ++i){
+    printf("%s ", input[i]); 
+  }
+
+  puts(""); 
+
+  return 0; 
+}
+
+int help(char **input){
+  // print help.txt 
+  // supports output redirection 
+
+  
+
+  // check for redirection 
+
+  // else 
+
+  return 0; 
+}
+
+
+int pause_(char **input){
+  // "pause" shell, until user hits enter ('\n')
+
+  int retval; 
+
+  while(retval = getchar() != '\n')
+	  continue; 
+
+  return 0; 
+}
+
+int quit(char **input){
+  // exit the shell 
+
+  free(input); 
+  exit(0); 
+
+  return 0; 
+}
+
+void group_command_argument(char **input){
+  // ... 
+
+  
+}
+
+int check_for_redirection(char **input, char *new_input, char *new_output){
+  // "<", ">", ">>"
+
+  // fix return value 
+
+  //char *symbols[] = {"<", ">", ">>"}; 
+
+  for(int i=1; i<input_argc; ++i){
+    // iterate through inputs
+
+    if(strcmp(input[i], "<") == 0){
+      // store the next arg (to the right)
+      new_input = input[i+1]; 
+
+      if((strcmp(new_input, ">") == 0 || strcmp(new_input, ">") == 0) || strcmp(new_input, ">>") == 0 || 
+         strcmp(new_input, "|") == 0 || strcmp(new_input, "&") == 0){
+
+         fprintf(stderr, "%s \n", "-myshell: error, < requires input file");
+          }
+    }
+
+     else if(strcmp(input[i], ">") == 0){
+         new_output = input[i+1]; 
+
+         if((strcmp(new_input, ">") == 0 || strcmp(new_input, ">" == 0) || strcmp(new_input, ">>" == 0 || 
+           strcmp(new_input, "|") == 0 || strcmp(new_input, "&") == 0){
+
+          fprintf(stderr, "%s \n", "-myshell: error, > requires input file");
+           }
+
+      else if(strcmp(input[i], ">>") == 0){
+          new_output = input[i+1]; 
+
+    }
+
+    //else if(strcmp(input[0], "clr") == 0)
+
+return 0; 
+}
+
+
+void run_external_command(char **input){
+// quick version 
+
+  int pid = fork(); 
+
+  if(pid == -1)
+    puts("error"); 
+
+  else if(pid == 0)
+    execvp(input[0], input); 
+
+  else{
+    int wc = wait(NULL);  
+  }
+
+}
+
+
+
+
 
 
 
