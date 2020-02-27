@@ -12,8 +12,8 @@ myshell.c - Developing a Linux Shell
 #include <dirent.h> 
 #include <sys/types.h>
 #include <sys/wait.h> 
-#include <sys/stat.h>
-#include <fcntl.h>
+//#include <sys/stat.h>
+//#include <fcntl.h>
 // ... 
 
 char** get_user_input(); 
@@ -34,10 +34,9 @@ void group_command_option(char **input);
 //int check_for_redirection(char **input, char *new_input, char *new_output); 
 int check_for_redirection(char **input); 
 
-
 void run_external_command(char **input); // add all those params 
 
-
+// some global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
 char *input_file, *output_file, *p_input, *p_output; 
 int input_argc; 
@@ -78,54 +77,60 @@ int main(int argc, char *argv[]){
       char **print = input; 
 
       while(*print){
-       // printf("%s\n", *(print)); 
+        printf("%s\n", *(print)); 
         ++print; 
       }
+
+      printf("%d", input_argc); 
    }
 
-    int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
+    // int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
 
-    if(quick_error){
-      // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again 
-      continue; 
-    }
+    // if(quick_error){
+    //   // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again 
+    //   continue; 
+    // }
 
-   // trim_spaces(input); // remove blank entries if present 
+   // trim_spaces(input); // remove blank entries if present  DONT NEED, JUST DO IT DURING TOKENIZE 
 
 
-    int built_in =  is_built_in_command(input); 
-    //printf("built-in: %d\n", built_in); 
+    // int built_in =  is_built_in_command(input); 
+    // //printf("built-in: %d\n", built_in); 
 
-    int successful; // 0 for YES 
+    // int successful; // 0 for YES 
 
-    // call built in function if present 
-    if(strcmp(input[0], "cd") == 0)
-      successful = cd(input);  
+    // // call built in function if present 
+    // if(strcmp(input[0], "cd") == 0)
+    //   successful = cd(input);  
 
-    else if(strcmp(input[0], "clr") == 0)
-      successful = clr(input); 
+    // else if(strcmp(input[0], "clr") == 0)
+    //   successful = clr(input); 
 
-    else if(strcmp(input[0], "dir") == 0)
-      successful = dir(input); 
+    // else if(strcmp(input[0], "dir") == 0)
+    //   successful = dir(input); 
 
-    else if(strcmp(input[0], "environ") == 0)
-      successful = environ(input); 
+    // else if(strcmp(input[0], "environ") == 0)
+    //   successful = environ(input); 
 
-    else if(strcmp(input[0], "echo") == 0)
-      successful = echo(input); 
+    // else if(strcmp(input[0], "echo") == 0)
+    //   successful = echo(input); 
 
-    else if(strcmp(input[0], "help") == 0)
-      successful = help(input); 
+    // else if(strcmp(input[0], "help") == 0)
+    //   successful = help(input); 
 
-    else if(strcmp(input[0], "pause") == 0)
-      successful = pause_(input); 
+    // else if(strcmp(input[0], "pause") == 0)
+    //   successful = pause_(input); 
 
-    else if(strcmp(input[0], "quit") == 0)
-      successful = quit(input); 
+    // else if(strcmp(input[0], "quit") == 0)
+    //   successful = quit(input); 
 
-    // built-in call not succesful, continue
-    if(successful == 1)
-      continue; 
+    // // built-in call not succesful, continue
+    // if(successful == 1)
+    //   continue; 
+
+
+    // ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE  ADD ANOTHER LOOP HERE 
+    // for(int i=0; i<num args; ++i){}
 
     //int redirection_present = check_for_redirection(input, new_input_file, new_output_file); 
 
@@ -157,14 +162,23 @@ char** get_user_input(void){
   //while((read = getline(&line, &len, stdin)) != -1){
   read = getline(&line, &len, stdin); 
 
-  tokens[i] = strtok(line, del);
+  tokens[i] = strtok(line, del); 
 
-  while(tokens[i] != NULL){
+
+ while(tokens[i] != NULL){
     //printf("\n%s\n", tokens[i]); 
     ++input_argc; 
     ++i; 
-    tokens[i] = strtok(NULL, del);  
+
+    if(isspace(tokens[i])){
+    // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
+      --i; 
+    }
+    
+    tokens[i] = strtok(NULL, del); 
   }
+
+  tokens[i] = '\0';  // add null terminator 
 
   return tokens; 
 }
@@ -274,16 +288,21 @@ int dir(char **input){
   // supports output redirection 
 
   char *name = malloc(sizeof(char) * 150); 
-  //char name[2] = "/"; 
 
-  if(input_argc > 2){
+  int output_redirection = check_for_redirection(input);
+  FILE *fptr = NULL; 
+
+  if(output_redirection == 1)
+    fptr = fopen(output_file, "w"); 
+
+  if((input_argc > 2) && (output_redirection != 1)){
     fprintf(stderr, "%s \n", "-myshell: error, too many args");
     return 1; 
   }
 
   if(input_argc == 1){
     // print current dir 
-
+    
     getcwd(name, 150); 
     //printf("%s\n", name); 
   }
@@ -293,24 +312,28 @@ int dir(char **input){
     name = input[1]; 
   }
 
+  // FIX FIX FIX FIX 
   DIR *directory = NULL;
 	struct dirent *directory_entry = NULL; 
-	//directory = opendir(name); 
   directory = opendir(name); 
-
-  // redirection later ! (just implement your pseudocode)
 
   if(directory == NULL)
     fprintf(stderr, "%s \n", "-myshell: error, <directory> not found");
 
-  // read from directory
-  while((directory_entry = readdir(directory)) != NULL)
-    printf("%s\t", directory_entry->d_name); 
+  // read from directory, print to screen or redirection output 
+  while((directory_entry = readdir(directory)) != NULL){
+
+    if(output_redirection == 1)
+      fprintf(fptr, "%s", directory_entry->d_name); 
+
+    else
+      printf("%s\t", directory_entry->d_name);
+
+  }
 
 
 return 0; 
 }
-
 
 int environ(char **input){
   // list env strings, supports output redirection 
@@ -420,6 +443,7 @@ int quit(char **input){
 
 void group_command_option(char **input){
   // ... 
+  // {"ls", "-la", ...} --> {"ls -la", ...} 
 
   
 }
