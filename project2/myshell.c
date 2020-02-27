@@ -19,9 +19,8 @@ myshell.c - Developing a Linux Shell
 char** get_user_input(); 
 char** read_batch_file(); 
 int quick_error_check(char **input); 
-void trim_spaces(char **input); 
 int is_built_in_command(char **input); 
-int cd(char **input); 
+int cd(char **input); // fix fix fix 
 int clr(char **input); 
 int dir(char **input); 
 int environ(char **input); 
@@ -32,7 +31,9 @@ int quit(char **input);
 // path 
 void group_command_option(char **input); 
 //int check_for_redirection(char **input, char *new_input, char *new_output); 
-int check_for_redirection(char **input); 
+int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
+// check for single pipe
+// check for control & 
 
 void run_external_command(char **input); // add all those params 
 
@@ -48,23 +49,23 @@ int main(int argc, char *argv[]){
   //char *new_input_file, *new_output_file, *p_input, *p_output = NULL; 
   //new_input_file, new_output_file, p_input, p_output = NULL;
 
-  input_file, output_file, p_input, p_output = NULL;  
+  input_file = NULL, output_file = NULL, p_input = NULL, p_output = NULL;  
   input_argc = 0; 
 
   char **input = NULL; // input argc[]
   
-  int batch_present = 0; 
+  int batch_present = 1; 
 
   if(argc == 2)
-    batch_present = 1; 
+    batch_present = 0; 
     
-  if(argc > 2)
+  if(argc > 2) // mode not recognized 
      exit(1); 
 
   // START LOOP 
   while(1){
 
-    if(batch_present)
+    if(batch_present == 0)
       input = read_batch_file(); 
 
     else{
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]){
         ++print; 
       }
 
-     // printf("%d", input_argc); 
+     // printf("input_args: %d\n", input_argc); 
    }
 
     int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
@@ -243,18 +244,26 @@ int cd(char **input){
   // cd <directory> 
   // also change the pwd 
 
+  if(input_argc > 2){
+    fprintf(stderr, "%s \n", "-myshell: error, cd takes 1 argument"); 
+    return 1; 
+  }
+
+  char buffer[250]; 
+
   if(input_argc == 1){
-    //fprintf(stderr, "%s \n", "-myshell: error, cd has too few arguments"); 
     // print the current directory 
-    char buffer[250]; 
+
     printf("%s\n", getcwd(buffer, sizeof(buffer)));
 
     return 0; 
   }
 
+  
   int retval = 0;  
 
   retval = chdir(input[1]); 
+  printf("%s\n", getcwd(buffer, sizeof(buffer)));
 
   if(retval == -1){
     fprintf(stderr, "%s \n", "-myshell: error, directory does not exist"); 
@@ -269,31 +278,42 @@ int dir(char **input){
   // supports output redirection 
 
   char *name = malloc(sizeof(char) * 150); 
+  name = NULL; 
 
   int output_redirection = check_for_redirection(input);
+
+  printf("%d\n", output_redirection);
+
   FILE *fptr = NULL; 
 
   if(output_redirection == 1)
-    fptr = fopen(output_file, "w"); 
+    fptr = fopen(output_file, "w"); // write to specified output file 
+  
+  if(output_redirection == 3)
+    fptr = fopen(output_file, "a"); // append to specified outputfile 
 
-  if((input_argc > 2) && (output_redirection != 1)){
+
+  if(output_redirection == 1 || output_redirection == 3){
+    if(fptr == NULL){
+      fprintf(stderr, "%s \n", "-myshell: error, could not open output file");
+      return 1; 
+    }
+  }
+
+
+  if((input_argc > 2) && output_redirection != 1 && output_redirection != 3){ // fix later, multi-lined 
     fprintf(stderr, "%s \n", "-myshell: error, too many args");
     return 1; 
   }
 
-  if(input_argc == 1){
-    // print current dir 
-    
-    getcwd(name, 150); 
-    //printf("%s\n", name); 
-  }
 
-  else if(input_argc == 2){
-    // used passed argument
+  if(input_argc != 2) // print contents of the current dir 
+    name = getcwd(name, 150); 
+
+  else if(input_argc == 2) // user passed argument
     name = input[1]; 
-  }
 
-  // FIX FIX FIX FIX 
+  
   DIR *directory = NULL;
 	struct dirent *directory_entry = NULL; 
   directory = opendir(name); 
@@ -304,16 +324,20 @@ int dir(char **input){
   // read from directory, print to screen or redirection output 
   while((directory_entry = readdir(directory)) != NULL){
 
-    if(output_redirection == 1)
-      fprintf(fptr, "%s", directory_entry->d_name); 
-
-    else
-      printf("%s\t", directory_entry->d_name);
-
+   if(output_redirection == 1 || output_redirection == 3) // specified file is already opened to "w" or "a", just need to write to that file 
+        fprintf(fptr, "%s    ", directory_entry->d_name); 
+   else
+     printf("%s    ", directory_entry->d_name); // print to stdout 
   }
 
 
-return 0; 
+  if(output_redirection == 1 || output_redirection == 3){
+    // newline and close the fptr 
+    fprintf(fptr, "%s", "\n"); 
+    fclose(fptr);
+  }
+
+  return 0; // success 
 }
 
 int environ(char **input){
@@ -322,7 +346,7 @@ int environ(char **input){
   int output_redirection = check_for_redirection(input); 
   //printf("%s", outut_redirection); 
   
-  if((input_argc > 1) && output_redirection != 1){
+  if((input_argc > 1) && output_redirection != 1 && output_redirection != 3){
     fprintf(stderr, "%s \n", "-myshell: error, environ takes no args");
     return 1; 
   }
@@ -341,14 +365,20 @@ int environ(char **input){
   else{
     // output redirection
 
-    FILE *fptr = fopen(output_file, "w"); 
+    FILE *fptr = NULL; 
+
+    if(output_redirection == 1)
+      fptr = fopen(output_file, "w"); 
+
+    if(output_redirection == 3)
+      fptr = fopen(output_file, "a"); 
 
     if(fptr == NULL){
       fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
       return 1; 
     }
 
-    fprintf(fptr, "%s%s\n\n%s%s\n\n%s%s\n\n", "USER: ", envar1, "PATH: ", envar2, "HOME: ", envar3); // write to file 
+    fprintf(fptr, "%s%s\n\n%s%s\n\n%s%s\n\n", "USER: ", envar1, "PATH: ", envar2, "HOME: ", envar3); // write to file regardless if > or >> 
     fclose(fptr); 
   }
   return 0; 
@@ -372,17 +402,30 @@ int echo(char **input){
   else{
     // output redirection 
 
-    FILE *fptr = fopen(output_file, "w"); 
+    FILE *fptr = NULL;
+    char *symbol = NULL; // signal for for loop to end 
+
+    if(output_redirection == 1){
+      fptr = fopen(output_file, "w"); 
+      symbol = ">"; 
+    }
+
+    if(output_redirection == 3){
+      fptr = fopen(output_file, "a");  
+      symbol = ">>"; 
+    }
 
     if(fptr == NULL){
       fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
       return 1; 
     }
 
-    for(int i = 1; strcmp(input[i], ">") != 0; ++i)
+    //for(int i = 1; strcmp(input[i], ">") != 0; ++i)  
+    for(int i = 1; strcmp(input[i], symbol) != 0; ++i) // print <comments> until we encouter the redirection symbol 
       fprintf(fptr, "%s ", input[i]); 
-    fprintf(fptr, "%s ", "\n"); 
+  
 
+    fprintf(fptr, "%s", "\n"); 
     fclose(fptr); 
   }
 
@@ -416,8 +459,14 @@ int help(char **input){
   else{
     // redirect the output to specified file 
 
-    FILE *fptr2 = fopen(output_file, "w"); 
+    FILE *fptr2 = NULL; 
 
+      if(output_redirection == 1)
+      fptr2 = fopen(output_file, "w"); 
+
+    if(output_redirection == 3)
+      fptr2 = fopen(output_file, "a");  
+ 
       if(fptr2 == NULL){
         fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
         return 1; 
@@ -446,6 +495,7 @@ int pause_(char **input){
 
 int quit(char **input){
   // exit the shell 
+  // doesn't really need a return value 
 
   free(input); 
   exit(0); 
@@ -496,17 +546,26 @@ int check_for_redirection(char **input){
 
           fprintf(stderr, "%s \n", "-myshell: error, > requires output file");
           return 2; 
-           }
+          }
 
         return 1; 
      }
 
-    //   else if(strcmp(input[i], ">>") == 0){
-    //       new_output = input[i+1]; 
+    else if(strcmp(input[i], ">>") == 0){
+        output_file = input[i+1]; 
+        //printf("inside redirection, new out APPEND: %s\n", output_file); 
 
-    // }
+      if((strcmp(output_file, ">") == 0 || strcmp(output_file, ">") == 0) || strcmp(output_file, ">>") == 0 || 
+         strcmp(output_file, "|") == 0 || strcmp(output_file, "&") == 0){
 
-    //else if(strcmp(input[0], "clr") == 0)
+          fprintf(stderr, "%s \n", "-myshell: error, > requires output file");
+          return 2; 
+          }
+
+        return 3; 
+     }
+
+
   }
   return 5; // no redirection 
 }
