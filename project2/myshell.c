@@ -77,56 +77,54 @@ int main(int argc, char *argv[]){
       char **print = input; 
 
       while(*print){
-        printf("%s\n", *(print)); 
+        //printf("%s\n", *(print)); 
         ++print; 
       }
 
-      printf("%d", input_argc); 
+     // printf("%d", input_argc); 
    }
 
-    // int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
+    int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
 
-    // if(quick_error){
-    //   // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again 
-    //   continue; 
-    // }
-
-   // trim_spaces(input); // remove blank entries if present  DONT NEED, JUST DO IT DURING TOKENIZE 
+    if(quick_error){
+      // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again 
+      continue; 
+    }
 
 
-    // int built_in =  is_built_in_command(input); 
-    // //printf("built-in: %d\n", built_in); 
+    int built_in =  is_built_in_command(input); 
+    //printf("built-in: %d\n", built_in); 
 
-    // int successful; // 0 for YES 
+    int successful; // 0 for YES 
 
-    // // call built in function if present 
-    // if(strcmp(input[0], "cd") == 0)
-    //   successful = cd(input);  
+    // call built in function if present 
+    if(strcmp(input[0], "cd") == 0)
+      successful = cd(input);  
 
-    // else if(strcmp(input[0], "clr") == 0)
-    //   successful = clr(input); 
+    else if(strcmp(input[0], "clr") == 0)
+      successful = clr(input); 
 
-    // else if(strcmp(input[0], "dir") == 0)
-    //   successful = dir(input); 
+    else if(strcmp(input[0], "dir") == 0)
+      successful = dir(input); 
 
-    // else if(strcmp(input[0], "environ") == 0)
-    //   successful = environ(input); 
+    else if(strcmp(input[0], "environ") == 0)
+      successful = environ(input); 
 
-    // else if(strcmp(input[0], "echo") == 0)
-    //   successful = echo(input); 
+    else if(strcmp(input[0], "echo") == 0)
+      successful = echo(input); 
 
-    // else if(strcmp(input[0], "help") == 0)
-    //   successful = help(input); 
+    else if(strcmp(input[0], "help") == 0)
+      successful = help(input); 
 
-    // else if(strcmp(input[0], "pause") == 0)
-    //   successful = pause_(input); 
+    else if(strcmp(input[0], "pause") == 0)
+      successful = pause_(input); 
 
-    // else if(strcmp(input[0], "quit") == 0)
-    //   successful = quit(input); 
+    else if(strcmp(input[0], "quit") == 0)
+      successful = quit(input); 
 
-    // // built-in call not succesful, continue
-    // if(successful == 1)
-    //   continue; 
+    // built-in call not succesful, continue
+    if(successful == 1)
+      continue; 
 
 
     // ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE  ADD ANOTHER LOOP HERE 
@@ -178,7 +176,7 @@ char** get_user_input(void){
     tokens[i] = strtok(NULL, del); 
   }
 
-  tokens[i] = '\0';  // add null terminator 
+  tokens[i] = '\0';  // added null terminator 
 
   return tokens; 
 }
@@ -212,23 +210,6 @@ int quick_error_check(char **input){
   return 0; 
 }
 
-void trim_spaces(char **input){
-  // shift the non-empty strings to the left, empty strings will be ignored. DECREMENT INPUT ARGC COUNT THEN 
-
-  // TODO 
-
-  for(int i=0; i<5; ++i){
-
-    if(isspace(*input[i])){
-
-      input[i] = input[i+1];
-      input[i+1] = "";
-      --input_argc; 
-      // not really removing them, just shifting 
-    }
-  }
-
-}
 
 int is_built_in_command(char **input){
   // filter through the input indexes for a match 
@@ -381,6 +362,7 @@ int echo(char **input){
 
   if(output_redirection == 5){
     // print to stdout 
+
   for(int i = 1; i<(input_argc); ++i)
     printf("%s ", input[i]); 
 
@@ -411,11 +393,41 @@ int help(char **input){
   // print help.txt 
   // supports output redirection 
 
-  
+  FILE *fptr = fopen("help.txt", "r");
 
-  // check for redirection 
+    if(fptr == NULL){
+      fprintf(stderr, "%s \n", "-myshell: error, could not open \"help.txt\"");
+      return 1; 
+    }
 
-  // else 
+  char buffer[250]; // enough to print a line in help.txt 
+  puts(""); 
+
+  int output_redirection = check_for_redirection(input); 
+
+  if(output_redirection == 5){
+    // print to stdout 
+
+    while(fgets(buffer, 250, fptr) != NULL)
+      printf("%s", buffer); 
+
+  }
+
+  else{
+    // redirect the output to specified file 
+
+    FILE *fptr2 = fopen(output_file, "w"); 
+
+      if(fptr2 == NULL){
+        fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+        return 1; 
+      }
+
+      while(fgets(buffer, 250, fptr) != NULL)
+        fprintf(fptr2, "%s", buffer); 
+  }
+
+  fclose(fptr); 
 
   return 0; 
 }
