@@ -32,20 +32,26 @@ int quit(char **input);
 void group_command_option(char **input); 
 //int check_for_redirection(char **input, char *new_input, char *new_output); 
 int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
-// check for single pipe
+int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
+void shift(char **input_shift, int start); 
+
+int check_for_pipe(char **input); // check for single pipe
 // check for control & 
 
 void run_external_command(char **input); 
 
 // some global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
-char *input_file, *output_file, *p_input, *p_output; 
+char *input_file, *output_file, *pipe_input, *pipe_output; 
 int input_argc; 
+
+// **** change all error messages to this 
+char error_message[30] = "An error has occured\n";  
 
 
 int main(int argc, char *argv[]){
 
-  input_file = NULL, output_file = NULL, p_input = NULL, p_output = NULL;  
+  input_file = NULL, output_file = NULL, pipe_input = NULL, pipe_output = NULL;  
   input_argc = 0; 
 
   char **input = NULL; // user char *argv[]
@@ -125,14 +131,11 @@ int main(int argc, char *argv[]){
     if(successful == 1)
       continue; 
 
-
-    // ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE ADD ANOTHER LOOP HERE  ADD ANOTHER LOOP HERE 
-
    // int redirection_present = check_for_redirection(input); // do inside run_external_command 
 
-
-    // this function will check for any redirection, a pipe, & operator, and then fork and exec
-    // the command with its option if present 
+    // FIX FIX 
+    // func. does everything, checks for redirection, pipe, &, and will call a shift func to shift appropirately 
+    // makes use of global var ref the input file, output file, etc ... 
     run_external_command(input); 
 
     break; // for testing 
@@ -160,13 +163,14 @@ char** get_user_input(void){
   tokens[i] = strtok(line, del); 
 
 
- while(tokens[i] != NULL){
+  while(tokens[i] != NULL){
     //printf("\n%s\n", tokens[i]); 
     ++input_argc; 
     ++i; 
 
     if(isspace(tokens[i])){
     // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
+    // every string added to tokens[i] will be a nonspace
       --i; 
     }
     
@@ -196,11 +200,13 @@ int quick_error_check(char **input){
   for(int i = 0; i<5; ++i){
 
     if(strcmp(input[0], cant_have[i]) == 0){
+      // leading string 
       fprintf(stderr, "%s %s\n", "-myshell: syntax error near unexpected token: ", cant_have[i]); 
       return 1; 
     }
 
     if(strcmp(input[input_argc-1], cant_have[i]) == 0){
+      // trailing string 
       fprintf(stderr, "%s %s\n", "-myshell: syntax error near unexpected token: ", cant_have[i]); 
       return 1; 
     }
@@ -515,6 +521,8 @@ void group_command_option(char **input){
 
     exec will take execvp(cmd, args) 
 
+    OR **** instead of setting to null, just shift all inputs down a slot 
+
   */
 
   
@@ -531,94 +539,225 @@ int check_for_redirection(char **input){
   5: NONE 
   */
 
-  for(int i=1; i<input_argc; ++i){
-    // iterate through inputs
+  // ex. will_print_names < names.txt > print_names_here
+  int out_present, in_present, append_out_present = 0; 
 
- 
+  for(int i=1; i<input_argc; ++i){
+    // iterate through inputs/ argc 
+
     if(strcmp(input[i], "<") == 0){
       input_file = input[i+1]; 
-      //printf("inside redirection, new out: %s\n", output_file); 
+      //printf("inside redirection, new in: %s\n", input_file); 
+
+      int invalid = check_for_invalid_file(input_file); 
+      if(invalid == 1)
+        return 2; // erorr warning already printed return to to run_external_command, which will return you back to the main loop to start over
 
       // no longer needed/ will interfer with execvp 
-      input[i] = NULL; 
-      input[i+1] = NULL; 
+     // input[i] = NULL; 
+     // input[i+1] = NULL;
 
-      if((strcmp(input_file, ">") == 0 || strcmp(input_file, ">") == 0) || strcmp(input_file, ">>") == 0 || 
-        strcmp(input_file, "|") == 0 || strcmp(input_file, "&") == 0){
+     // trying out shifting instead, will down shift, either by 1, 2, maybe more 
+    shift(input, i); 
 
-        fprintf(stderr, "%s \n", "-myshell: error, < requires input file");
-        return 2; 
-        }
+    in_present = 1; 
 
-      return 0; 
+    if(out_present == 1 || append_out_present == 1)
+      return 4; // indicate BOTH redirections are present
+
+
+      // if(out_present == 1 || append_out_present == 1){
+      //   // iterate to next i, check for 
+      //   both = 1;
+      //   continue; 
+      // }
+
+      //if(both == 0)
+      // return 0; // input redirection present 
+      //return 0; // input redirection present 
     }
 
     if(strcmp(input[i], ">") == 0){
       output_file = input[i+1]; 
       //printf("inside redirection, new out: %s\n", output_file); 
 
-      // no longer needed/ will interfer with execvp 
+      int invalid = check_for_invalid_file(output_file); 
+        if(invalid == 1)
+          return 2;
+
+      shift(input, i); 
+      
+      out_present = 1; 
+
+      if(in_present == 1)
+        return 4; // indicate BOTH redirections are present
+
+      // if(in_present == 1){
+      //   both = 1; 
+      //   continue; 
+      // }
+
+      // if(both == 0)
+      //   return 1; // output redirection present 
+    }
+
+    if(strcmp(input[i], ">>") == 0){
+      output_file = input[i+1]; 
+      //printf("inside redirection, new out APPEND: %s\n", output_file); 
+
+      int invalid = check_for_invalid_file(input_file); 
+      if(invalid == 1)
+        return 2;
+
+      // // no longer needed/ will interfer with execvp 
+      // input[i] = NULL; 
+      // input[i+1] = NULL;
+
+      shift(input, i); 
+
+      append_out_present = 1; 
+      
+
+      if(in_present == 1)
+        return 4; // indicate both redirections are present
+    }
+  }
+
+    // At this point, if both redirections were present, the func returned, the remaining value of in_present, out_present, and 
+    // append_out_present will return a value idicating only one type of redirection was found. Note: if error, already returned 
+
+    if(in_present == 1)
+      return 0; 
+
+    else if(out_present == 1)
+      return 1; 
+
+    else if(append_out_present == 1)
+      return 3; 
+
+    else 
+      return 5;  // no redirection 
+}
+
+int check_for_invalid_file(char *file){
+// input or output file string is ref. in char *file, less redundancy 
+  
+  if((strcmp(file, ">") == 0 || strcmp(file, "<") == 0) || strcmp(file, ">>") == 0 || 
+    strcmp(file, "|") == 0 || strcmp(file, "&") == 0){
+
+      //fprintf(stderr, "%s %s\n", "-myshell: error, unexecpted token: ", file);
+      write(STDERR_FILENO, error_message, strlen(error_message)); 
+      return 1; 
+      }
+
+return 0; 
+}
+
+void shift(char **input_shift, int start){
+  // just simply shift down, which will "remove" the redirection symbol (or whatever symbol found), and the indicated file, which is already saved in a ptr to a string 
+
+  for(int i = start; input_shift[i] != NULL; ++i){
+    input_shift[i] = input_shift[i+2];  
+    //printf("i is :%d\n", i); 
+
+    /*  Explanation / diagram 
+    before loop: ./greet > names.txt > test.txt null 
+    ./greet > names.txt > test.txt
+    ./greet > test.txt > test.txt
+    ./greet > test.txt null test.txt 
+    end loop: ./greet > test.txt null null 
+
+    shift successful
+    */
+  }
+
+  // decrement the input args appropriately
+  int new_count = 0; 
+
+  char **print = input_shift; 
+
+  while(*print){
+   // printf("%s\n", *(print)); 
+    ++new_count; 
+    ++print; 
+  }
+
+  input_argc = new_count; 
+
+}
+
+int check_for_pipe(char **input){
+  // myshell will support piping between 2 processes
+  // will make use of the global var: pipe_input, pipe_output 
+
+  for(int i=1; i<input_argc; ++i){
+
+    if(strcmp(input[i], "|") == 0){
+      // already error checked for incorrect leading and trailing symbols 
+      pipe_input = input[i-1]; // to write from side of pipe 
+      pipe_output = input[i+1]; // to read from side of the pipe 
+
+      // no longer the | string 
       input[i] = NULL; 
-      input[i+1] = NULL; 
 
-      if((strcmp(output_file, ">") == 0 || strcmp(output_file, ">") == 0) || strcmp(output_file, ">>") == 0 || 
-        strcmp(output_file, "|") == 0 || strcmp(output_file, "&") == 0){
+      if((strcmp(input_file, ">") == 0 || strcmp(input_file, ">") == 0) || strcmp(input_file, ">>") == 0 || 
+        strcmp(input_file, "|") == 0 || strcmp(input_file, "&") == 0){
 
-        fprintf(stderr, "%s \n", "-myshell: error, > requires output file");
+        fprintf(stderr, "%s \n", "-myshell: error, | requires an input file and outputfile");
         return 2; 
         }
 
-      return 1; 
+      return 0; // pipe present, save input and output of pipe files 
     }
-
-    else if(strcmp(input[i], ">>") == 0){
-      output_file = input[i+1]; 
-        //printf("inside redirection, new out APPEND: %s\n", output_file); 
-
-        // no longer needed/ will interfer with execvp 
-        input[i] = NULL; 
-        input[i+1] = NULL;
-
-      if((strcmp(output_file, ">") == 0 || strcmp(output_file, ">") == 0) || strcmp(output_file, ">>") == 0 || 
-         strcmp(output_file, "|") == 0 || strcmp(output_file, "&") == 0){
-
-          fprintf(stderr, "%s \n", "-myshell: error, >> requires output file");
-          return 2; 
-          }
-
-        return 3; 
-    }
-
-    // BOTH cat > take_input > output_cat_here
-
-
   }
-  return 5; // no redirection 
+
+  return 1; // no pipe present 
 }
 
 
 void run_external_command(char **input){
-  // quick version 
+
+  // .ex  ./func_that_will_print_hello      char *cmd = "./func" 
+  // user needs to add ./ to specify location of executable 
+
+  //printf("both test: %s\n%s\n", input_file, output_file);
 
   int file_des;  
+  int file_des_two; // for use with both redirections 
 
   int redirection = check_for_redirection(input); 
 
+  // int pipe_found = check_for_pipe(input); 
+  // int pipe_fd[2]; 
+
+  // if(pipe_found == 0){
+  //   // pipe symbol found, create a pipe
+    
+  //   if(pipe(pipe_fd) == -1){
+  //     fprintf(stderr, "%s \n", "-myshell: error, could not create pipe");
+  //     return; 
+  //   } 
+  // }
+
   //// testing 
   // char *cmd = input[0]; 
-  // char *args[3]; 
+  // char *args[4]; 
   // args[0] = cmd; 
   // args[1] = input[1]; 
   // args[2] = NULL; 
 
   int pid = fork(); 
 
-  if(pid == -1)
-    puts("error"); 
+  if(pid == -1){
+    write(STDERR_FILENO, error_message, strlen(error_message)); 
+    return; 
+  }
 
 
   else if(pid == 0){
 
+
+    // ============================ REDIRECTION ================================================= 
     if(redirection == 0){
       // input redirection < 
 
@@ -644,14 +783,48 @@ void run_external_command(char **input){
     }
 
     // both 
+    else if(redirection == 4){
+      // both, input_file and output_file have strings relating to the specified file 
+      // < and (> or >>) 
+      // (> or >>) and <  
+
+     // printf("out: %s\nin: %s\n", output_file, input_file); 
+
+      file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO); 
+      printf("in: %d\n", file_des); 
+      dup2(file_des, 0); 
+
+      close(file_des); 
+
+      // FIX diff. between > and >> ADD FUNCATIONLITY FOR >> with use of < and >> or >> and < 
+      //file_des_two = 
+      file_des_two = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+
+      printf("out: %d", file_des_two); 
+      dup2(file_des_two, 1);
+       
+      close(file_des_two); 
+    }
+
+
+  // ============================ PIPING ================================================= 
+
+    // if(pipe_found == 0){
+    //   // pipe already created, replace stdin to this end of the pipe (write side) 
+
+    //   dup2(pipe_fd[0], 0); 
+    //   close(pipe_fd[1]); // close not in use end of pipe (read side)
+    // }
+  
 
 
 
-    int execute = execvp(input[0], input); // execute command and option(if there,), next string is null 
+    int execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
    // int execute = execvp(cmd, args);
 
     if(execute == -1){
-      fprintf(stderr, "%s \n", "-myshell: error, failed to execute the command / program");
+      //fprintf(stderr, "%s \n", "-myshell: error, failed to execute the command / program");
+      fprintf(stderr, "%s \n", "-myshell: error, command not found");
       return;  
     }
 
@@ -662,6 +835,14 @@ void run_external_command(char **input){
   else{
     // if & dont want shell to wait for command to finish, exe in the background 
     int wc = wait(NULL);  
+
+    // if(pipe_found == 0){
+    //   // pipe already created with present write side, replace stdout to this end of the pipe (read side) 
+
+    //   // dup2(pipe_fd[1], 1); 
+    //   // close(pipe_fd[0]); // close not in use end of pipe (write side)
+    //   // // FIX FIX 
+    // }
   }
 
 }
