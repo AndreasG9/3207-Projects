@@ -16,6 +16,8 @@ myshell.c - Developing a Linux Shell
 #include <fcntl.h>
 // ... 
 
+void print(char **print_this); 
+
 char** get_user_input(); 
 char** read_batch_file(); 
 int quick_error_check(char **input); 
@@ -33,7 +35,11 @@ void group_command_option(char **input);
 //int check_for_redirection(char **input, char *new_input, char *new_output); 
 int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
+//void shift(char **input_shift, int start, int redirection); 
 void shift(char **input_shift, int start); 
+
+void print_this(char **print_this); 
+
 
 int check_for_pipe(char **input); // check for single pipe
 // check for control & 
@@ -540,10 +546,13 @@ int check_for_redirection(char **input){
   */
 
   // ex. will_print_names < names.txt > print_names_here
+
+
+  // FIX FIX FIX FIX FIX FIX 
   int out_present, in_present, append_out_present = 0; 
 
   for(int i=1; i<input_argc; ++i){
-    // iterate through inputs/ argc 
+    // iterate through inputs/ argc, start at [1] b/c already checked for invalid symybols that lead 
 
     if(strcmp(input[i], "<") == 0){
       input_file = input[i+1]; 
@@ -553,87 +562,91 @@ int check_for_redirection(char **input){
       if(invalid == 1)
         return 2; // erorr warning already printed return to to run_external_command, which will return you back to the main loop to start over
 
-      // no longer needed/ will interfer with execvp 
-     // input[i] = NULL; 
-     // input[i+1] = NULL;
-
      // trying out shifting instead, will down shift, either by 1, 2, maybe more 
-    shift(input, i); 
+      shift(input, i); 
 
-    in_present = 1; 
+      // reset i, smarter ways to get positioning back but whatever 
+      i = 0; // will start at 1 again 
 
-    if(out_present == 1 || append_out_present == 1)
-      return 4; // indicate BOTH redirections are present
+      in_present = 1; 
 
+      if(out_present == 1 || append_out_present == 1)
+        return 4; // indicate BOTH redirections are present
 
-      // if(out_present == 1 || append_out_present == 1){
-      //   // iterate to next i, check for 
-      //   both = 1;
-      //   continue; 
-      // }
+      //break; 
+      if(input_argc == 1){ 
+        return 0; 
+      }
+       // break; // only one type of redirection, inputs already shifted 
 
-      //if(both == 0)
-      // return 0; // input redirection present 
-      //return 0; // input redirection present 
     }
 
     if(strcmp(input[i], ">") == 0){
       output_file = input[i+1]; 
       //printf("inside redirection, new out: %s\n", output_file); 
+      
 
       int invalid = check_for_invalid_file(output_file); 
         if(invalid == 1)
           return 2;
 
       shift(input, i); 
-      
+      i = 0; 
+
       out_present = 1; 
 
-      if(in_present == 1)
+      if(in_present == 1){
+       // puts("NO"); 
         return 4; // indicate BOTH redirections are present
+      }
 
-      // if(in_present == 1){
-      //   both = 1; 
-      //   continue; 
-      // }
 
-      // if(both == 0)
-      //   return 1; // output redirection present 
+      if(input_argc = 1)
+        return 1; 
+
+      
+        
+        //break; // only one type of redirection, inputs already shifted 
     }
+
 
     if(strcmp(input[i], ">>") == 0){
       output_file = input[i+1]; 
       //printf("inside redirection, new out APPEND: %s\n", output_file); 
 
-      int invalid = check_for_invalid_file(input_file); 
+      int invalid = check_for_invalid_file(output_file); 
       if(invalid == 1)
         return 2;
 
-      // // no longer needed/ will interfer with execvp 
-      // input[i] = NULL; 
-      // input[i+1] = NULL;
-
       shift(input, i); 
+      i = 0; 
 
       append_out_present = 1; 
       
-
       if(in_present == 1)
         return 4; // indicate both redirections are present
+
+      //break; 
     }
   }
+
 
     // At this point, if both redirections were present, the func returned, the remaining value of in_present, out_present, and 
     // append_out_present will return a value idicating only one type of redirection was found. Note: if error, already returned 
 
-    if(in_present == 1)
+    if(in_present == 1){
+      puts("YES!"); 
       return 0; 
+    }
 
-    else if(out_present == 1)
+    else if(out_present == 1){
+      //printf("1inside redirection, new out: %s\n", output_file); 
       return 1; 
+    }
 
-    else if(append_out_present == 1)
+    else if(append_out_present == 1){ 
       return 3; 
+    }
 
     else 
       return 5;  // no redirection 
@@ -649,41 +662,64 @@ int check_for_invalid_file(char *file){
       write(STDERR_FILENO, error_message, strlen(error_message)); 
       return 1; 
       }
-
-return 0; 
+  
+  return 0; 
 }
 
 void shift(char **input_shift, int start){
   // just simply shift down, which will "remove" the redirection symbol (or whatever symbol found), and the indicated file, which is already saved in a ptr to a string 
 
-  for(int i = start; input_shift[i] != NULL; ++i){
-    input_shift[i] = input_shift[i+2];  
-    //printf("i is :%d\n", i); 
+  int i = start; 
+
+  for(i; input_shift[i-1] != NULL; ++i){
+
+    input_shift[i] = input_shift[i+2]; 
 
     /*  Explanation / diagram 
     before loop: ./greet > names.txt > test.txt null 
     ./greet > names.txt > test.txt
     ./greet > test.txt > test.txt
     ./greet > test.txt null test.txt 
-    end loop: ./greet > test.txt null null 
+    end loop same as: ./greet > test.txt null null 
+
+    ex 2: ls > output.txt 
+    ls null output.txt
+    end loop
 
     shift successful
     */
   }
+ 
+  input_shift[i] = NULL; // already NULl but whatever 
 
   // decrement the input args appropriately
   int new_count = 0; 
-
+  
   char **print = input_shift; 
-
   while(*print){
-   // printf("%s\n", *(print)); 
+   //printf("%s\n", *(print)); 
     ++new_count; 
     ++print; 
   }
 
   input_argc = new_count; 
 
+
+}
+
+void print_this(char **print_this){
+// for testing 
+
+  puts("INPUT NOW"); 
+
+  char **print = print_this; 
+
+  while(*print){
+    printf("%s\n", *(print)); 
+    ++print; 
+  }
+
+  puts("\n");
 }
 
 int check_for_pipe(char **input){
@@ -722,10 +758,15 @@ void run_external_command(char **input){
 
   //printf("both test: %s\n%s\n", input_file, output_file);
 
+  //print_this(input); 
+
   int file_des;  
   int file_des_two; // for use with both redirections 
 
   int redirection = check_for_redirection(input); 
+
+  //printf("\n\nrun output: %s\n", output_file); 
+
 
   // int pipe_found = check_for_pipe(input); 
   // int pipe_fd[2]; 
@@ -756,11 +797,9 @@ void run_external_command(char **input){
 
   else if(pid == 0){
 
-
     // ============================ REDIRECTION ================================================= 
     if(redirection == 0){
       // input redirection < 
-
       file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO); 
       dup2(file_des, 0); // newfd is stdin, for which dup2 will make a copy of. input is redirected to the "input_file"
     }
@@ -788,22 +827,28 @@ void run_external_command(char **input){
       // < and (> or >>) 
       // (> or >>) and <  
 
-     // printf("out: %s\nin: %s\n", output_file, input_file); 
+     printf("out: %s\nin: %s\n", output_file, input_file); 
+
+     
+
+     //int save = dup(1); 
 
       file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO); 
       printf("in: %d\n", file_des); 
       dup2(file_des, 0); 
-
-      close(file_des); 
+      //close(file_des); 
 
       // FIX diff. between > and >> ADD FUNCATIONLITY FOR >> with use of < and >> or >> and < 
       //file_des_two = 
-      file_des_two = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+      file_des_two = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO); 
 
       printf("out: %d", file_des_two); 
+
       dup2(file_des_two, 1);
        
-      close(file_des_two); 
+     close(file_des_two); 
+
+      
     }
 
 
