@@ -19,7 +19,7 @@ myshell.c - Developing a Linux Shell
 void print(char **print_this); 
 
 char** get_user_input(); 
-char** read_batch_file(); 
+char** read_batch_file(char *batch_file); 
 int quick_error_check(char **input); 
 int is_built_in_command(char **input); 
 int cd(char **input); // fix fix fix 
@@ -34,7 +34,7 @@ int quit(char **input);
 void group_command_option(char **input); 
 int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
-void shift(char **input_shift, int start); // remove uneeded symbol and file in input, if present 
+void shift(char **input_shift, int start); // remove uneeded symbol and file in input, if present, also adjust the input count 
 
 void print_this(char **print_this); 
 
@@ -48,6 +48,8 @@ char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "qui
 char *input_file, *output_file, *pipe_input, *pipe_output; 
 int input_argc; 
 int append; // quick fix 
+
+int pipe_index; 
 
 // **** change all error messages to this (maybe leave some spceific ones)
 char error_message[30] = "An error has occured\n";  
@@ -72,7 +74,7 @@ int main(int argc, char *argv[]){
   while(1){
 
     if(batch_present == 0)
-      input = read_batch_file(); 
+      input = read_batch_file(argv[1]); 
 
     else{
       //interactive mode 
@@ -91,64 +93,71 @@ int main(int argc, char *argv[]){
      // printf("input_args: %d\n", input_argc); 
    }
 
-    int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
+  
+   // SECOND LOOP, used for multiple commands (with use & op, or read input from batch file)
+    for(int i = 0; i<input_argc; ++i){
+      // when input is shifted to remove symbols and files, input_argc is adjusted properly 
 
-    if(quick_error){
+
+
+      int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
+
+      if(quick_error){
       // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again (in interactive mode)
-      continue; 
-    }
+        continue; 
+     }
 
 
-    int built_in =  is_built_in_command(input); 
-    //printf("built-in: %d\n", built_in); 
+      int built_in =  is_built_in_command(input); 
+      //printf("built-in: %d\n", built_in); 
 
-    int successful; // 0 for YES 
+      int successful; // 0 for YES 
 
-    // call built in function if present 
-    if(built_in == 0){
+     // call built in function if present 
+      if(built_in == 0){
 
-      if(strcmp(input[0], "cd") == 0)
-        successful = cd(input);  
+        if(strcmp(input[0], "cd") == 0)
+          successful = cd(input);  
 
-      else if(strcmp(input[0], "clr") == 0)
-        successful = clr(input); 
+        else if(strcmp(input[0], "clr") == 0)
+          successful = clr(input); 
 
-      else if(strcmp(input[0], "dir") == 0)
-        successful = dir(input); 
+        else if(strcmp(input[0], "dir") == 0)
+          successful = dir(input); 
 
-      else if(strcmp(input[0], "environ") == 0)
-        successful = environ(input); 
+        else if(strcmp(input[0], "environ") == 0)
+         successful = environ(input); 
 
-      else if(strcmp(input[0], "echo") == 0)
-        successful = echo(input); 
+       else if(strcmp(input[0], "echo") == 0)
+         successful = echo(input); 
 
-      else if(strcmp(input[0], "help") == 0)
-        successful = help(input); 
+        else if(strcmp(input[0], "help") == 0)
+         successful = help(input); 
 
-      else if(strcmp(input[0], "pause") == 0)
-        successful = pause_(input); 
+        else if(strcmp(input[0], "pause") == 0)
+         successful = pause_(input); 
 
-      else if(strcmp(input[0], "quit") == 0)
-        successful = quit(input); 
+        else if(strcmp(input[0], "quit") == 0)
+         successful = quit(input); 
 
     // path? 
 
-
-    if(successful == 1) // built-in call not succesful, print standard msg 
-      write(STDERR_FILENO, error_message, strlen(error_message)); 
+     if(successful == 1) // built-in call not succesful, print standard msg 
+       write(STDERR_FILENO, error_message, strlen(error_message)); 
       
-    continue; // continue regardless
+      continue; // continue regardless
     }
 
-
-    // FIX FIX 
     // func. does everything, checks for redirection, pipe, &, and will call a shift func to shift appropirately 
     // makes use of global var ref the input file, output file, etc ... 
-
     run_external_command(input); 
 
+    shift(input, 0); // successful, remove input that was executed, there are mutiple commands present, will not overwrite, as null succeeds the command
+
+    } // outside for loop 
+
     break; // for testing 
-  }
+ }
 
   return 0; 
 }
@@ -192,10 +201,33 @@ char** get_user_input(void){
   return tokens; 
 }
 
-char ** read_batch_file(){
-// TODO 
+char ** read_batch_file(char *batch_file){
+  // get input from batch file 
 
-  return 0; 
+  FILE *fptr = fopen(batch_file, "r");
+
+  if(fptr == NULL){
+    // erorr 
+     
+  }
+
+  char *line, *res = NULL;
+  size_t len = 0; 
+  ssize_t read = -1; 
+
+   char **input = NULL; 
+  //  int i =0; 
+
+  // while((read = getline(&line, &len, fptr)) != -1){
+  //   input[i] = line; 
+  //   printf("%s", input[i]); 
+  // }
+  
+  // fclose(fptr); 
+
+  // input[i] = NULL; 
+
+  return input; 
 }
 
 int quick_error_check(char **input){
@@ -626,7 +658,6 @@ int check_for_redirection(char **input){
         return 4; // indicate both redirections are present
       }
 
-      
     //   if(input_argc = 1)
     //     return 3; // only append output redirection present 
     }
@@ -652,7 +683,7 @@ int check_for_redirection(char **input){
 }
 
 int check_for_invalid_file(char *file){
-// input or output file string is ref. in char *file, less redundancy 
+  // input or output file string is ref. in char *file, less redundancy 
   
   if((strcmp(file, ">") == 0 || strcmp(file, "<") == 0) || strcmp(file, ">>") == 0 || 
     strcmp(file, "|") == 0 || strcmp(file, "&") == 0){
@@ -705,7 +736,7 @@ void shift(char **input_shift, int start){
 }
 
 void print_this(char **print_this){
-// for testing 
+  // for testing 
 
   puts("INPUT NOW"); 
 
@@ -727,18 +758,22 @@ int check_for_pipe(char **input){
 
     if(strcmp(input[i], "|") == 0){
       // already error checked for incorrect leading and trailing symbols 
-      pipe_input = input[i-1]; // to write from side of pipe 
+     // pipe_input = input[i-1]; // to write from side of pipe 
+      pipe_index = i; 
+
+      pipe_input = input[0]; // cmd name 
       pipe_output = input[i+1]; // to read from side of the pipe 
 
-      // no longer the | string 
+      // no longer the | string, dont need to shift 
       input[i] = NULL; 
 
-      if((strcmp(input_file, ">") == 0 || strcmp(input_file, ">") == 0) || strcmp(input_file, ">>") == 0 || 
-        strcmp(input_file, "|") == 0 || strcmp(input_file, "&") == 0){
+      int in = check_for_invalid_file(pipe_input);
+      int out = check_for_invalid_file(pipe_output); 
 
+      if(in == 1 || out == 1){
         fprintf(stderr, "%s \n", "-myshell: error, | requires an input file and outputfile");
         return 2; 
-        }
+      }
 
       return 0; // pipe present, save input and output of pipe files 
     }
@@ -769,7 +804,6 @@ int check_for_background(char **input){
   return 0; // & present 
 }
 
-
 void run_external_command(char **input){
   // LOOP EXTRA LOOP 
 
@@ -785,31 +819,23 @@ void run_external_command(char **input){
 
   int redirection = check_for_redirection(input); 
 
-  //printf("\n\nrun output: %s\n", output_file); 
-
   int background = check_for_background(input); 
 
-  // int pipe_found = check_for_pipe(input); 
-  // int pipe_fd[2]; 
+  int pipe_found = check_for_pipe(input);  
+  //printf("both test: %s\n%s\n", pipe_input, pipe_output);
+  int pipe_fd[2]; 
 
-  // if(pipe_found == 0){
-  //   // pipe symbol found, create a pipe
+  if(pipe_found == 0){
+    // pipe symbol found, create a pipe
     
-  //   if(pipe(pipe_fd) == -1){
-  //     fprintf(stderr, "%s \n", "-myshell: error, could not create pipe");
-  //     return; 
-  //   } 
-  // }
-
-  //// testing 
-  // char *cmd = input[0]; 
-  // char *args[4]; 
-  // args[0] = cmd; 
-  // args[1] = input[1]; 
-  // args[2] = NULL; 
+    if(pipe(pipe_fd) == -1){
+      fprintf(stderr, "%s \n", "-myshell: error, could not create pipe");
+      return; 
+    } 
+  }
 
   int pid = fork(); 
-  int status; 
+  int status, execute; 
 
   if(pid == -1){
     write(STDERR_FILENO, error_message, strlen(error_message)); 
@@ -864,29 +890,26 @@ void run_external_command(char **input){
       dup2(file_des_two, 1); 
       close(file_des_two); 
     }
+ 
+
+  // ============================ PIPING WR SIDE ================================================= 
+
+    if(pipe_found == 0){
+      // pipe already created, replace stdin to this end of the pipe (write side) 
+
+      dup2(pipe_fd[0], 0); 
+      close(pipe_fd[1]); // close not in use end of pipe (read side)
+
+    }
 
 
-  // ============================ PIPING ================================================= 
-
-    // if(pipe_found == 0){
-    //   // pipe already created, replace stdin to this end of the pipe (write side) 
-
-    //   dup2(pipe_fd[0], 0); 
-    //   close(pipe_fd[1]); // close not in use end of pipe (read side)
-    // }
-  
-
-
-
-    int execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
+    execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
    // int execute = execvp(cmd, args);
 
     if(execute == -1){
-      //fprintf(stderr, "%s \n", "-myshell: error, failed to execute the command / program");
       fprintf(stderr, "%s \n", "-myshell: error, command not found");
       return;  
     }
-
 
     close(file_des); 
   }
@@ -895,20 +918,39 @@ void run_external_command(char **input){
     // if & dont want shell to wait for command to finish, exe in the background 
 
     if(background == 0){
-    // if & dont want shell to wait for command to finish, exe in the background 
-
-      waitpid(pid, &status, 0); 
+    // if & dont want shell to wait for command/ program to finish, exe in the background 
+      execute = waitpid(pid, &status, 0); 
     }
     
-    //int wc = wait(NULL);  
 
-    // if(pipe_found == 0){
-    //   // pipe already created with present write side, replace stdout to this end of the pipe (read side) 
+    if(pipe_found == 0){
+      // pipe already created with present write side, replace stdout to this end of the pipe (read side) 
 
-    //   // dup2(pipe_fd[1], 1); 
-    //   // close(pipe_fd[0]); // close not in use end of pipe (write side)
-    //   // // FIX FIX 
-    // }
+      //shift(input, 2); // remove previous command
+
+
+      //dont want to use shift(), slighlty different format here
+      // testing this out 
+      int j = 1; 
+      for(int i = 0; j<(pipe_index+1); ++i){
+        // right now pipe_index is null, to the right is the second cmd for the read side of the pipe
+        // shift to start of input
+        // ex. cat names.txt (null) grep "Andreas" --> grep "Andreas" (null) (doesnt matter whats here) 
+        input[i] = input[j+pipe_index]; 
+        ++j; 
+      }
+
+
+     // print_this(input); 
+
+      dup2(pipe_fd[1], 1); 
+      close(pipe_fd[0]); // close not in use end of pipe (write side)
+
+      //print_this(input); 
+
+      // exec again 
+      execute = execvp(input[0], input);
+   }
   }
 
 }
