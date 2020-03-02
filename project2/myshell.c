@@ -51,6 +51,9 @@ int append; // quick fix
 
 int pipe_index; 
 
+char *write_side[4]; 
+char  *read_side[4]; 
+
 // **** change all error messages to this (maybe leave some spceific ones)
 char error_message[30] = "An error has occured\n";  
 
@@ -761,19 +764,49 @@ int check_for_pipe(char **input){
      // pipe_input = input[i-1]; // to write from side of pipe 
       pipe_index = i; 
 
-      pipe_input = input[0]; // cmd name 
-      pipe_output = input[i+1]; // to read from side of the pipe 
-
-      // no longer the | string, dont need to shift 
       input[i] = NULL; 
 
-      int in = check_for_invalid_file(pipe_input);
-      int out = check_for_invalid_file(pipe_output); 
+     // pipe_input = input[0]; // cmd name 
+     // pipe_output = input[i+1]; // to read from side of the pipe 
 
-      if(in == 1 || out == 1){
-        fprintf(stderr, "%s \n", "-myshell: error, | requires an input file and outputfile");
-        return 2; 
+     // TESTING THIS PARSER 
+      int j, k; 
+
+      for(j=0; j<=pipe_index; ++j){
+        // L side 
+        // start at 0, input[0] needs to be a cmd 
+        write_side[j] = input[j]; 
+        //printf("write: %s\n", write_side[j]); 
       }
+
+      int m = 0; 
+      for(k = pipe_index; k<input_argc; ++k){
+        //for(k = pipe_index; read_side[k] != NULL; ++k){
+        // L side 
+        // start at 0, input[0] needs to be a cmd 
+        read_side[m] = input[pipe_index+m+1];
+       // printf("read: %s\n", read_side[m]); 
+        ++m; 
+        }
+
+        // write_side = {cmd, optional arg, null}
+        // read_side = {cmd, optional arg, null}
+
+        //print_this(write_side); 
+       // print_this(read_side); 
+
+
+
+      // no longer the | string, dont need to shift 
+     // input[i] = NULL; 
+
+      // int in = check_for_invalid_file(pipe_input);
+      // int out = check_for_invalid_file(pipe_output); 
+
+      // if(in == 1 || out == 1){
+      //   fprintf(stderr, "%s \n", "-myshell: error, | requires an input file and outputfile");
+      //   return 2; 
+      // }
 
       return 0; // pipe present, save input and output of pipe files 
     }
@@ -822,6 +855,7 @@ void run_external_command(char **input){
   int background = check_for_background(input); 
 
   int pipe_found = check_for_pipe(input);  
+
   //printf("both test: %s\n%s\n", pipe_input, pipe_output);
   int pipe_fd[2]; 
 
@@ -892,19 +926,19 @@ void run_external_command(char **input){
     }
  
 
-  // ============================ PIPING WR SIDE ================================================= 
+  // ============================ PIPING READ SIDE ================================================= 
 
     if(pipe_found == 0){
-      // pipe already created, replace stdin to this end of the pipe (write side) 
+      // For child, pipe already created, replace stdout to this end of the pipe (read side) 
 
       dup2(pipe_fd[0], 0); 
-      close(pipe_fd[1]); // close not in use end of pipe (read side)
+      close(pipe_fd[1]); // close not in use end of pipe (write side)
 
+      execute = execvp(read_side[0], read_side); 
     }
 
 
-    execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
-   // int execute = execvp(cmd, args);
+   execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
 
     if(execute == -1){
       fprintf(stderr, "%s \n", "-myshell: error, command not found");
@@ -924,32 +958,36 @@ void run_external_command(char **input){
     
 
     if(pipe_found == 0){
-      // pipe already created with present write side, replace stdout to this end of the pipe (read side) 
+      // parent process, this is the WRITE to side 
+
+     //IGORE // pipe already created with present write side, replace stdout to this end of the pipe (read side) 
 
       //shift(input, 2); // remove previous command
 
 
-      //dont want to use shift(), slighlty different format here
-      // testing this out 
-      int j = 1; 
-      for(int i = 0; j<(pipe_index+1); ++i){
-        // right now pipe_index is null, to the right is the second cmd for the read side of the pipe
-        // shift to start of input
-        // ex. cat names.txt (null) grep "Andreas" --> grep "Andreas" (null) (doesnt matter whats here) 
-        input[i] = input[j+pipe_index]; 
-        ++j; 
-      }
+    //   //dont want to use shift(), slighlty different format here
+    //   // testing this out 
+    //   int j = 1; 
+    //   for(int i = 0; j<(pipe_index+1); ++i){
+    //     // right now pipe_index is null, to the right is the second cmd for the read side of the pipe
+    //     // shift to start of input
+    //     // ex. cat names.txt (null) grep "Andreas" --> grep "Andreas" (null) (doesnt matter whats here) 
+    //     input[i] = input[j+pipe_index]; 
+    //     ++j; 
+    //   }
 
 
-     // print_this(input); 
+    //  // print_this(input); 
 
       dup2(pipe_fd[1], 1); 
-      close(pipe_fd[0]); // close not in use end of pipe (write side)
+      close(pipe_fd[0]); // close not in use end of pipe (read side)
 
-      //print_this(input); 
+      execute = execvp(write_side[0], write_side); 
 
-      // exec again 
-      execute = execvp(input[0], input);
+    //   //print_this(input); 
+
+    //   // exec again 
+    //   execute = execvp(input[0], input);
    }
   }
 
