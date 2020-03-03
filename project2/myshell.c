@@ -18,7 +18,7 @@ myshell.c - Developing a Linux Shell
 #include <fcntl.h>
 // ... 
 
-void print(char **print_this); 
+
 
 char** get_user_input(); 
 char** read_batch_file(FILE *file_ptr); 
@@ -33,51 +33,52 @@ int help(char **input);
 int pause_(char **input); 
 int quit(char **input);
 // path 
-void group_command_option(char **input); 
-int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
-int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
-void shift(char **input_shift, int start); // remove uneeded symbol and file in input, if present, also adjust the input count 
 
 void print_this(char **print_this); 
-
-int check_for_pipe(char **input); // check for single pipe
-// check for control & 
-
+void shift(char **input_shift, int start); // remove uneeded symbol and file in input, if present, also adjust the input count 
 void run_external_command(char **input); 
+int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
+int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
+int check_for_pipe(char **input); // check for single pipe
+void pipe_parser(char **input); 
+int check_for_background(char **input); 
 
-// some global var 
+void parse(char **input);
+
+// basic global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
+int input_argc; 
+char error_message[30] = "An error has occured\n";  // **** change all error messages to this (maybe leave some specific ones)
 
 // for redirection  
 char *input_file, *output_file; 
 int append; // quick fix 
-//*pipe_input, *pipe_output; 
-
-int input_argc; 
-
 
 // for pipe 
 char *write_side[4]; 
 char  *read_side[4]; 
 int pipe_index; 
 
-// **** change all error messages to this (maybe leave some spceific ones)
-char error_message[30] = "An error has occured\n";  
+char **parsed; 
+
+int start_here; 
+
+
+int background; 
 
 
 int main(int argc, char *argv[]){
-  // pipe_input = NULL, pipe_output = NULL;  
-
-  //char **input = NULL; // user char *argv[]
 
   FILE *fptr = NULL;
+
+  start_here = 0; 
   
   int batch_present = 1; 
 
   if(argc == 2){
+    // open the batch file, read line by line inside loop 
     batch_present = 0; 
     fptr = fopen(argv[1], "r"); 
-    // open the batch file, read line by line inside loop 
   }
     
   if(argc > 2) // mode not recognized 
@@ -86,46 +87,54 @@ int main(int argc, char *argv[]){
   // START LOOP 
   while(1){
 
-    // reset 
+    // reset var 
     char **input = NULL;  
     input_argc = 0;  
     input_file = NULL, output_file = NULL; 
+    parsed == NULL; 
 
     if(batch_present == 0){ 
+      puts(""); // space between outputs 
       input = read_batch_file(fptr); // get a single line 
-       print_this(input); 
-      //exit(0); 
+       //print_this(input); 
+
+    if(input == NULL)
+      exit(0); // reached EOF 
     }
 
     else{
       //interactive mode 
-     printf("%s", "myshell> "); 
+
+      printf("%s", "myshell> "); 
     
       input = get_user_input(); 
-
       // print_this(input); 
-     // printf("input_args: %d\n", input_argc); 
-   }
+    }
 
   
    // SECOND LOOP, used for multiple commands (with use & op, or read input from batch file)
-   // for(int i = 0; i<input_argc; ++i){
+   // ?? ?? 
+  // for(int i = 0; i<input_argc; ++i){
+
+    // parse(input); // char *parsed[] will be present with cmd and its args 
+
       // when input is shifted to remove symbols and files, input_argc is adjusted properly 
       
       int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
 
       if(quick_error){
-      // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again (in interactive mode)
+        // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again (in interactive mode)
         continue; 
-     }
+      }
 
       
       int built_in =  is_built_in_command(input);  
 
       int successful; // 0 for YES 
 
-     // call built in function if present 
       if(built_in == 0){
+        // call built in function if present 
+        // don't need to parse, direct implementation inside func. handlers 
 
         if(strcmp(input[0], "cd") == 0)
           successful = cd(input);  
@@ -139,9 +148,8 @@ int main(int argc, char *argv[]){
         else if(strcmp(input[0], "environ") == 0)
          successful = environ(input); 
 
-       else if(strcmp(input[0], "echo") == 0){ 
+       else if(strcmp(input[0], "echo") == 0) 
          successful = echo(input); 
-       }
 
         else if(strcmp(input[0], "help") == 0)
          successful = help(input); 
@@ -157,21 +165,39 @@ int main(int argc, char *argv[]){
      if(successful == 1) // built-in call not succesful, print standard msg 
        write(STDERR_FILENO, error_message, strlen(error_message)); 
 
-      free(input); 
+      //shift(input, 0); 
+
+      //free(input); 
       continue; // continue regardless
     }
 
     // func. does everything, checks for redirection, pipe, &, and will call a shift func to shift appropirately 
     // makes use of global var ref the input file, output file, etc ... 
-    run_external_command(input); 
+
+    background = check_for_background(input); 
+
+    if(background == 0)
+      parse(input); 
+
+    while(parsed[0] != NULL){
+      //second loop, mainly used & / multiple commands args 
+      
+      run_external_command(input); 
+
+      parse(input); // parse again 
+      //break; 
+    }
+
+      break; 
+
+     // parse(input); // parse if needed 
 
     //shift(input, 0); // successful, remove input that was executed, there are mutiple commands present, will not overwrite, as null succeeds the command
 
-   // } // outside for loop 
+ // } // outside for loop 
  
    // break; // for testing 
 
- 
  }
 
   return 0; 
@@ -179,8 +205,6 @@ int main(int argc, char *argv[]){
 
 
 char** get_user_input(){
-
-  //printf("%s", "myshell> "); 
 
   char *line, *res = NULL;
   size_t len = 0; 
@@ -191,10 +215,10 @@ char** get_user_input(){
   tokens = (char **)malloc(sizeof(char*) * 50);
   int i = 0; 
 
-  //while((read = getline(&line, &len, stdin)) != -1){
   read = getline(&line, &len, stdin); 
 
-  // if(read == )
+  if(read == -1)
+    return NULL; 
 
   tokens[i] = strtok(line, del); 
 
@@ -218,14 +242,24 @@ char** get_user_input(){
   //tokens[i] = '\0';  // added null terminator, just for reassurance 
   tokens[i] = NULL; 
 
+  int count = 0; 
+  
+  char **print = tokens; 
+  while(*print){
+   //printf("%s\n", *(print)); 
+    ++count; 
+    ++print; 
+  }
+
+  input_argc = count; 
+  //printf("%d\n", input_argc); 
+
   return tokens; 
 }
 
 char ** read_batch_file(FILE *file_ptr){
   // get input from batch file 
   // READ a line, execute that cmd, read next line, execute that cmd, ...  
-
-  //FILE *fptr = fopen(batch_file, "r");
 
   char *line, *res = NULL;
   size_t len = 0; 
@@ -237,6 +271,11 @@ char ** read_batch_file(FILE *file_ptr){
 
   read = getline(&line, &len, file_ptr);
 
+  if(read == -1){
+    // EOF or error, exit loop 
+    return NULL; 
+  }
+
   int i = 0; 
 
   tokens[i] = strtok(line, del); 
@@ -246,11 +285,11 @@ char ** read_batch_file(FILE *file_ptr){
     ++input_argc; 
     ++i; 
 
-    if(isspace(tokens[i])){ 
-    // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
-    // every string added to tokens[i] will be a nonspace
-      --i; 
-    }
+    // if(isspace(tokens[i])){ 
+    // // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
+    // // every string added to tokens[i] will be a nonspace
+    //   --i; 
+    // }
     
     tokens[i] = strtok(NULL, del); 
   }
@@ -259,12 +298,7 @@ char ** read_batch_file(FILE *file_ptr){
   tokens[i] = NULL; 
 
   return tokens;
-
-
-
-  // input[i] = NULL; 
-
-  return input; 
+  //return input; 
 }
 
 int quick_error_check(char **input){
@@ -312,7 +346,7 @@ int clr(char **input){
   // built-it command to clear the screen
 
   if(input_argc > 1){
-   //fprintf(stderr, "%s \n", "-myshell: error, clr takes no arguments");
+    fprintf(stderr, "%s \n", "-myshell: error, clr takes no arguments");
     return 1; 
   }
 
@@ -326,7 +360,7 @@ int cd(char **input){
   // also change the pwd 
 
   if(input_argc > 2){
-    //fprintf(stderr, "%s \n", "-myshell: error, cd takes 1 argument"); 
+    fprintf(stderr, "%s \n", "-myshell: error, cd takes 1 argument"); 
     return 1; 
   }
 
@@ -347,7 +381,7 @@ int cd(char **input){
   printf("%s\n", getcwd(buffer, sizeof(buffer)));
 
   if(retval == -1){
-    //fprintf(stderr, "%s \n", "-myshell: error, directory does not exist"); 
+    fprintf(stderr, "%s \n", "-myshell: error, directory does not exist"); 
     return 1; 
   }
 
@@ -383,7 +417,7 @@ int dir(char **input){
 
 
   if((input_argc > 2) && output_redirection != 1 && output_redirection != 3){ // fix later, multi-lined 
-    //fprintf(stderr, "%s \n", "-myshell: error, too many args");
+    fprintf(stderr, "%s \n", "-myshell: error, too many args");
     return 1; 
   }
 
@@ -519,7 +553,7 @@ int help(char **input){
   FILE *fptr = fopen("help.txt", "r");
 
   if(fptr == NULL){
-    //fprintf(stderr, "%s \n", "-myshell: error, could not open \"help.txt\"");
+    fprintf(stderr, "%s \n", "-myshell: error, could not open \"help.txt\"");
     return 1; 
   }
 
@@ -561,7 +595,6 @@ int help(char **input){
   return 0; 
 }
 
-
 int pause_(char **input){
   // "pause" shell, until user hits enter ('\n')
 
@@ -577,14 +610,12 @@ int quit(char **input){
   // exit the shell 
   // doesn't really need a return value 
 
-  free(input); 
   exit(0); 
 
   return 0; 
 }
 
 void group_command_option(char **input){
-
 
   // I dont think I will need to do this anymore 
   // make uneeded symbol strings null, already saved new output/input file 
@@ -600,9 +631,7 @@ void group_command_option(char **input){
 
     OR **** instead of setting to null, just shift all inputs down a slot 
 
-  */
-
-  
+  */ 
 }
 
 int check_for_redirection(char **input){ 
@@ -731,12 +760,66 @@ int check_for_invalid_file(char *file){
   return 0; 
 }
 
+void parse(char **input){
+  // parse cmd and args from input (a line of input could have mutiple processes (&), so need to parse)
+  // don't know how many args (echo cmd you could have a long comment), use malloc 
+
+  // echo hello & echo world & 
+  // parsed = {"echo", "hello", "null"}; 
+  // run that 
+  // pased = {"echo", "world", "null"}; 
+  // run that 
+
+  free(parsed); // reset 
+  parsed = (char **)malloc(sizeof(char*) * 50);
+  
+  int i; 
+  int j = 0; 
+
+
+  for(i = start_here; input[i] != NULL; ++i){
+    //stop when null is reached in input, for ex. if there is a & symbol it has been replaced with a NULL,
+    //and other possible input could be to the right of that. 
+
+    parsed[j] = input[i]; 
+    ++j; 
+  }
+
+  parsed[j] = NULL; 
+
+  start_here = i+1;  // ingore the null; 
+
+  print_this(parsed); 
+
+
+  // // decrement the input args appropriately
+  // int new_count = 0; 
+  
+  // char **print = input; 
+  // while(*print){
+  //  //printf("%s\n", *(print)); 
+  //   ++new_count; 
+  //   ++print; 
+  // }
+
+  // input_argc = new_count;
+
+  // printf("new count: %d\n", input_argc); 
+
+
+}
+
 void shift(char **input_shift, int start){
   // just simply shift down, which will "remove" the redirection symbol, and the indicated file, which is already saved in a ptr to a string 
 
   int i = start; 
 
+  int j =0; 
+
   for(i = start; input_shift[i-1] != NULL; ++i){
+  //for(int i = start_here; input_shift[i] != NULL; ++i){
+
+    //input_shift[j] = input_shift[i+2];
 
     input_shift[i] = input_shift[i+2]; 
 
@@ -773,8 +856,6 @@ void shift(char **input_shift, int start){
 void print_this(char **print_this){
   // for testing 
 
-  puts("INPUT NOW"); 
-
   char **print = print_this; 
 
   while(*print){
@@ -782,7 +863,7 @@ void print_this(char **print_this){
     ++print; 
   }
 
-  puts("\n");
+  puts("");
 }
 
 int check_for_pipe(char **input){
@@ -800,6 +881,8 @@ int check_for_pipe(char **input){
 
      // pipe_input = input[0]; // cmd name 
      // pipe_output = input[i+1]; // to read from side of the pipe 
+
+     pipe_parser(input); // will store read_side and write_side 
 
      // TESTING THIS PARSER 
       int j, k; 
@@ -826,7 +909,7 @@ int check_for_pipe(char **input){
         // read_side = {cmd, optional arg, null}
 
         //print_this(write_side); 
-       // print_this(read_side); 
+       //print_this(read_side); 
 
 
 
@@ -846,6 +929,12 @@ int check_for_pipe(char **input){
   }
 
   return 1; // no pipe present 
+}
+
+void pipe_parser(char **input){
+  // use two global array of ptrs to strings to store read_side and write_side of pipe 
+
+
 }
 
 int check_for_background(char **input){
@@ -871,25 +960,22 @@ int check_for_background(char **input){
 }
 
 void run_external_command(char **input){
-  // LOOP EXTRA LOOP 
+  // user needs to add ./ to specify location of executable ex. ./program 
 
-  // .ex  ./func_that_will_print_hello      char *cmd = "./func" 
-  // user needs to add ./ to specify location of executable 
-
-  //printf("both test: %s\n%s\n", input_file, output_file);
-
-  //print_this(input); 
-
-  int file_des;  
-  int file_des_two; // for use with both redirections 
+  int file_des, file_des_two; // for use with both redirections 
 
   int redirection = check_for_redirection(input); 
 
-  int background = check_for_background(input); 
+ // int background = check_for_background(input); 
+
+  // if(background == 0)
+  //   parse(input); 
+
+  return; 
 
   int pipe_found = check_for_pipe(input);  
 
-  //printf("both test: %s\n%s\n", pipe_input, pipe_output);
+
   int pipe_fd[2]; 
 
   if(pipe_found == 0){
@@ -908,7 +994,6 @@ void run_external_command(char **input){
     write(STDERR_FILENO, error_message, strlen(error_message)); 
     return; 
   }
-
 
   else if(pid == 0){
 
