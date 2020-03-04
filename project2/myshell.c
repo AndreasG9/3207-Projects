@@ -36,19 +36,24 @@ int quit(char **input);
 
 void print_this(char **print_this); 
 void shift(char **input_shift, int start); // remove uneeded symbol and file in input, if present, also adjust the input count 
-void run_external_command(char **input); 
+void parse(char **input); // trying this parse instead of shifting, I couldnt get & to work properly w/ shift 
+void run_external_command(char **input, int redirection); 
 int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
 int check_for_pipe(char **input); // check for single pipe
 void pipe_parser(char **input); 
 int check_for_background(char **input); 
+void run_test(int redirection);
 
-void parse(char **input);
+int check_for_input_redirection(char **input); 
+int check_for_output_redirection(char **input); 
+
 
 // basic global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
 int input_argc; 
 char error_message[30] = "An error has occured\n";  // **** change all error messages to this (maybe leave some specific ones)
+int start_here; // index to start parser from input 
 
 // for redirection  
 char *input_file, *output_file; 
@@ -61,10 +66,9 @@ int pipe_index;
 
 char **parsed; 
 
-int start_here; 
-
-
 int background; 
+
+//int redirection; 
 
 
 int main(int argc, char *argv[]){
@@ -72,6 +76,7 @@ int main(int argc, char *argv[]){
   FILE *fptr = NULL;
 
   start_here = 0; 
+  parsed = NULL;
   
   int batch_present = 1; 
 
@@ -91,15 +96,16 @@ int main(int argc, char *argv[]){
     char **input = NULL;  
     input_argc = 0;  
     input_file = NULL, output_file = NULL; 
-    parsed == NULL; 
+
+    start_here = 0; 
 
     if(batch_present == 0){ 
       puts(""); // space between outputs 
       input = read_batch_file(fptr); // get a single line 
        //print_this(input); 
 
-    if(input == NULL)
-      exit(0); // reached EOF 
+      if(input == NULL)
+        exit(0); // reached EOF 
     }
 
     else{
@@ -108,7 +114,7 @@ int main(int argc, char *argv[]){
       printf("%s", "myshell> "); 
     
       input = get_user_input(); 
-      // print_this(input); 
+      //print_this(input); 
     }
 
   
@@ -174,31 +180,85 @@ int main(int argc, char *argv[]){
     // func. does everything, checks for redirection, pipe, &, and will call a shift func to shift appropirately 
     // makes use of global var ref the input file, output file, etc ... 
 
-    background = check_for_background(input); 
+    //int redirection = check_for_redirection(input);  
 
-    if(background == 0)
-      parse(input); 
+    int output_redirection = check_for_output_redirection(input); 
 
-    while(parsed[0] != NULL){
-      //second loop, mainly used & / multiple commands args 
+    if(output_redirection == 2)
+      continue; 
+
+    int input_redirection = check_for_input_redirection(input); 
+
+    if(input_redirection == 2)
+      continue; 
+
+    int redirection; 
+
+    if(output_redirection == 1 && input_redirection == 0)
+      redirection = 4; // signal BOTH are present 
+    else if(input_redirection == 0)
+      redirection = 0; // input redirection
+    else if(output_redirection == 1)
+      redirection = 1; // output redirection
+    else if(output_redirection == 3)
+      redirection = 3; // append output redirection
+    else if(output_redirection == 5 && input_redirection == 5)
+      redirection = 5; // none 
+
+    printf("%d\n", redirection); 
+
+    // if output returns 0, and input returns 1, then both are present, and the output and input file currently store the specified files 
+
+    //print_this(parsed); 
+
+    //run_external_command(input, redirection); 
+    //run_test(redirection); //<=- BIG ERROR HERE 
+
+    //print_this(parsed); 
+    // background = check_for_background(input); 
+
+    // if(background == 0)
+    //   parse(input); 
+     
+    // ================== ONLY LOOP MUTIPLE PROCESSES YOU IDIOT 
+    // while(parsed[0] != NULL){
+    //   //second loop, mainly used & / multiple commands args 
+        
+    //   // //run_external_command(input); 
+    //   // if(background == 0){
+    //   //   run_test();
+    //   //   parse(input); // parse again 
+    //   // } 
+
+    //   // else{
+    //   //   run_external_command(input); 
+    //   // } 
       
-      run_external_command(input); 
+    //   run_test(); 
+    //  // run_external_command(input); 
+    //  // print_this(parsed); 
 
-      parse(input); // parse again 
-      //break; 
-    }
+    //   //run_test(); 
+    //   parse(input); // if needed 
+    //   //break; 
+    // }
 
-      break; 
+    break; 
+    
 
-     // parse(input); // parse if needed 
+//     start_here = 0; 
+//     break; 
+     // break; 
 
-    //shift(input, 0); // successful, remove input that was executed, there are mutiple commands present, will not overwrite, as null succeeds the command
+//      // parse(input); // parse if needed 
 
- // } // outside for loop 
+//     //shift(input, 0); // successful, remove input that was executed, there are mutiple commands present, will not overwrite, as null succeeds the command
+
+//  // } // outside for loop 
  
-   // break; // for testing 
+//    // break; // for testing 
 
- }
+  }
 
   return 0; 
 }
@@ -212,8 +272,10 @@ char** get_user_input(){
 
   char del[] = " \n\t";  
   char **tokens = NULL; 
-  tokens = (char **)malloc(sizeof(char*) * 50);
+  tokens = (char **)malloc(sizeof(char*) * 100);
   int i = 0; 
+
+  input_argc = 0; 
 
   read = getline(&line, &len, stdin); 
 
@@ -615,25 +677,6 @@ int quit(char **input){
   return 0; 
 }
 
-void group_command_option(char **input){
-
-  // I dont think I will need to do this anymore 
-  // make uneeded symbol strings null, already saved new output/input file 
-  /*
-    ls -la > test.txt 
-
-    char *cmd = "ls"
-    char *args[] = {"la", "-la", "NULL"} 
-
-    > already made null, test.txt stored in output file, which is the fd modeified 
-
-    exec will take execvp(cmd, args) 
-
-    OR **** instead of setting to null, just shift all inputs down a slot 
-
-  */ 
-}
-
 int check_for_redirection(char **input){ 
   // wil check for input redirection, both output redirections, and both input and output redirections 
   // if present, the corresponding file / files (both redirections) will be saved, and the redirection symbol along 
@@ -647,11 +690,12 @@ int check_for_redirection(char **input){
   4: BOTH > and < 
   5: NONE 
   */
-
   // ex. will_print_names < names.txt > print_names_here
   int out_present, in_present, append_out_present = 0; 
-
-  for(int i=1; i<input_argc; ++i){
+  int i = 1; 
+  for(int i=1; i<(input_argc-1); ++i){
+   // while(1){
+    
     // iterate through inputs/ argc, start at [1] b/c already checked for invalid symybols that lead 
 
     if(strcmp(input[i], "<") == 0){
@@ -662,7 +706,11 @@ int check_for_redirection(char **input){
       if(invalid == 1)
         return 2; // erorr warning already printed return to to run_external_command, which will return you back to the main loop to start over
 
-      shift(input, i); // will shift all input to "remove" the < and input_file
+      //shift(input, i); // will shift all input to "remove" the < and input_file
+
+      input[i] = NULL; 
+      input[i+1] = NULL; 
+      parse(input); 
 
       // I need reset i, in case there is also ">" present, 
       // set i to 0, will increment to 1, and is "reset"
@@ -674,21 +722,35 @@ int check_for_redirection(char **input){
       if(out_present == 1 || append_out_present == 1)
         return 4; // indicate BOTH redirections are present
 
-      // if(input_argc == 1){ 
-      //   return 0; // only input redirection present 
-      // }
+       else{
+         // iterate, could also be an output redirection 
+        ++i; 
+        continue; 
+      }
 
     }
 
-    if(strcmp(input[i], ">") == 0){
+    else if(strcmp(input[i], ">") == 0){
       output_file = input[i+1]; 
       //printf("inside redirection, new out: %s\n", output_file); 
       
-      int invalid = check_for_invalid_file(output_file); 
-        if(invalid == 1)
-          return 2;
+     int invalid = check_for_invalid_file(output_file); 
 
-      shift(input, i); 
+      if(invalid == 1)
+        return 2;
+
+      //shift(input, i); 
+      input[i+1] = NULL;
+      input[i] = NULL; 
+      
+      
+      parse(input); 
+
+     // print_this(parsed); 
+
+      return 1; 
+      //start_here = 0; 
+
       i = 0; 
 
       out_present = 1; 
@@ -697,12 +759,14 @@ int check_for_redirection(char **input){
         return 4; // indicate BOTH redirections are present
       }
 
-    //   if(input_argc == 1)
-    //     return 1; // only output redirection present 
+      else{
+        ++i; 
+        continue; 
+      }
     }
 
 
-    if(strcmp(input[i], ">>") == 0){
+    else if(strcmp(input[i], ">>") == 0){
       output_file = input[i+1]; 
       //printf("inside redirection, new out APPEND: %s\n", output_file); 
 
@@ -721,30 +785,129 @@ int check_for_redirection(char **input){
         return 4; // indicate both redirections are present
       }
 
+      else{
+        ++i; 
+        continue; 
+      }
+
     //   if(input_argc = 1)
     //     return 3; // only append output redirection present 
     }
+
+    //++i; 
   }
 
     // At this point, if both redirections were present, the func returned, the remaining value of in_present, out_present, and 
     // append_out_present will return a value idicating only one type of redirection was found. Note: if error, already returned 
 
     if(in_present == 1){
+      // only input redirection 
       return 0; 
     }
 
     else if(out_present == 1){
-      //printf("1inside redirection, new out: %s\n", output_file); 
+      // only output redirection 
+      //printf("inside redirection, new out: %s\n", output_file); 
       return 1; 
     }
 
-    else if(append_out_present == 1)
+    else if(append_out_present == 1){
+      // 
       return 3; 
+    }
 
     else{
-      return 5;  // no redirection 
+      // no redirection, still just to store into parsed 
+      parse(input); 
+      return 5;  
     }
 }
+
+int check_for_input_redirection(char **input){
+
+  for(int i=1; i<(input_argc-1); ++i){
+    
+    // iterate through inputs/ argc, start at [1] b/c already checked for invalid symybols that lead 
+    if(input[i] == NULL)
+      continue; // dont want to pass null to strcmp, iterate to next string 
+
+    if(strcmp(input[i], "<") == 0){
+      input_file = input[i+1]; 
+      //printf("inside redirection, new in: %s\n", input_file); 
+
+      int invalid = check_for_invalid_file(input_file); 
+      if(invalid == 1)
+        return 2; // erorr warning already printed return to to run_external_command, which will return you back to the main loop to start over
+
+      //shift(input, i); // will shift all input to "remove" the < and input_file
+
+      input[i] = NULL; 
+      input[i+1] = NULL; 
+      parse(input); 
+
+      return 0; // input 
+    }
+
+  } 
+  return 5; // none 
+}
+
+int check_for_output_redirection(char **input){
+
+    for(int i = 1; i<(input_argc-1); ++i){
+
+      if(input[i] == NULL)
+        continue; // dont want to pass null to strcmp, iterate to next string 
+
+      if(strcmp(input[i], ">") == 0){
+      output_file = input[i+1]; 
+      //printf("inside redirection, new out: %s\n", output_file); 
+      
+      int invalid = check_for_invalid_file(output_file); 
+
+      if(invalid == 1)
+        return 2;
+
+      //shift(input, i); 
+      input[i+1] = NULL;
+      input[i] = NULL; 
+      
+      
+      parse(input); 
+
+     // print_this(parsed); 
+
+    return 1; // output redirection present 
+    }
+  }
+
+  for(int i = 1; i<(input_argc-1); ++i){
+
+    if(input[i] == NULL)
+      continue; 
+
+    if(strcmp(input[i], ">>") == 0){
+    output_file = input[i+1]; 
+      
+     int invalid = check_for_invalid_file(output_file); 
+
+      if(invalid == 1)
+        return 2;
+
+      //shift(input, i); 
+      input[i+1] = NULL;
+      input[i] = NULL; 
+         
+      parse(input); 
+
+    return 3; // append output redirection present 
+    }
+  }
+
+  return 5; // none 
+}
+
+
 
 int check_for_invalid_file(char *file){
   // input or output file string is ref. in char *file, less redundancy 
@@ -765,9 +928,9 @@ void parse(char **input){
   // don't know how many args (echo cmd you could have a long comment), use malloc 
 
   // echo hello & echo world & 
-  // parsed = {"echo", "hello", "null"}; 
+  // parsed = {"ls", "-la", "null"}; 
   // run that 
-  // pased = {"echo", "world", "null"}; 
+  // parsed = {"./greet", "Andreas", "null"}; 
   // run that 
 
   free(parsed); // reset 
@@ -775,7 +938,6 @@ void parse(char **input){
   
   int i; 
   int j = 0; 
-
 
   for(i = start_here; input[i] != NULL; ++i){
     //stop when null is reached in input, for ex. if there is a & symbol it has been replaced with a NULL,
@@ -789,24 +951,7 @@ void parse(char **input){
 
   start_here = i+1;  // ingore the null; 
 
-  print_this(parsed); 
-
-
-  // // decrement the input args appropriately
-  // int new_count = 0; 
-  
-  // char **print = input; 
-  // while(*print){
-  //  //printf("%s\n", *(print)); 
-  //   ++new_count; 
-  //   ++print; 
-  // }
-
-  // input_argc = new_count;
-
-  // printf("new count: %d\n", input_argc); 
-
-
+  //print_this(parsed); 
 }
 
 void shift(char **input_shift, int start){
@@ -959,22 +1104,19 @@ int check_for_background(char **input){
   return 0; // & present 
 }
 
-void run_external_command(char **input){
+//void run_external_command(char **input, int in_redirection, int out_redirection){
+  void run_external_command(char **input, int redirection){
   // user needs to add ./ to specify location of executable ex. ./program 
 
   int file_des, file_des_two; // for use with both redirections 
 
-  int redirection = check_for_redirection(input); 
-
+  //int redirection = check_for_redirection(input); 
  // int background = check_for_background(input); 
 
-  // if(background == 0)
-  //   parse(input); 
-
-  return; 
-
-  int pipe_found = check_for_pipe(input);  
-
+   //int pipe_found = check_for_pipe(input);  
+  int pipe_found = 1; 
+  
+ // print_this(parsed); 
 
   int pipe_fd[2]; 
 
@@ -995,7 +1137,7 @@ void run_external_command(char **input){
     return; 
   }
 
-  else if(pid == 0){
+  else if(pid == 0){ 
 
     // ============================ REDIRECTION ================================================= 
     if(redirection == 0){
@@ -1006,6 +1148,7 @@ void run_external_command(char **input){
 
     else if(redirection == 1){
       // output redirection > 
+      
 
       file_des = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
       dup2(file_des, 1); // newfd is stdout, for which dup2 will make a copy of. output is redirected to the "output_file"
@@ -1056,7 +1199,11 @@ void run_external_command(char **input){
     }
 
 
-   execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
+    // ================================= EXECUTE ===========================================================
+    //execute = execvp(input[0], input); // execute command and option(if there,), next string is null, fds already modified if needed 
+    
+    execute = execvp(parsed[0], parsed);
+
 
     if(execute == -1){
       fprintf(stderr, "%s \n", "-myshell: error, command not found");
@@ -1101,9 +1248,50 @@ void run_external_command(char **input){
 
       execute = execvp(write_side[0], write_side); 
    }
+   else{
 
     wait(NULL); // without this, will mess up when myshell> gets printed
+   }
+
   }
+
+}
+
+void run_test(int redirection){
+
+  int pid = fork(); 
+  int status, execute; 
+  int file_des; 
+
+  if(redirection == 1){
+  // output redirection >  
+    
+
+    file_des = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+    dup2(file_des, 1); // newfd is stdout, for which dup2 will make a copy of. output is redirected to the "output_file"
+  }
+
+  else if(redirection == 0){
+      file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO); 
+      dup2(file_des, 0); // newfd is stdin, for which dup2 will make a copy of. input is redirected to the "input_file"
+  }
+
+  if(pid == -1){
+    write(STDERR_FILENO, error_message, strlen(error_message)); 
+    return; 
+  }
+
+   else if(pid == 0){ 
+
+     execvp(parsed[0], parsed); 
+
+   }
+
+   else{
+     wait(NULL); 
+   }
+
+
 
 }
 
