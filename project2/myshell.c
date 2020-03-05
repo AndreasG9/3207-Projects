@@ -28,6 +28,7 @@ int echo(char **input);
 int help(char **input); 
 int pause_(char **input); 
 int quit(char **input);
+int path(char **input); 
 // path 
 
 void print_this(char **print_this); 
@@ -43,6 +44,7 @@ int check_for_output_redirection(char **input);
 int run_external_command(char **input, int redirection, int background, int pipe_present); 
 int run_external_cmd_pipe(int pipe_present); // run_external_command was too cluttered, simplifed viewing 
 
+int path_check(); 
 
 // basic global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
@@ -63,13 +65,18 @@ int pipe_index;
 // get input, store in input, parse, store in parsed
 char **parsed; 
 
+char **shell_path; 
+
 
 int main(int argc, char *argv[]){
 
   FILE *fptr = NULL;
 
+  shell_path = malloc(sizeof(char) * 200); 
+  shell_path[0] = "/bin"; // program starts with one directory 
+
   start_here = 0; 
-  parsed = NULL;
+  //parsed = NULL;
   
   int batch_present = 1; 
 
@@ -87,9 +94,9 @@ int main(int argc, char *argv[]){
 
     // reset var 
     char **input = NULL;  
-    input_argc = 0;  
-    start_here = 0; 
+    input_argc = 0, start_here = 0, custom_msg = 0; 
     input_file = NULL, output_file = NULL; 
+    parsed == NULL; 
 
     if(batch_present == 0){ 
       puts(""); // space between outputs 
@@ -111,11 +118,9 @@ int main(int argc, char *argv[]){
 
       if(input == NULL)
         continue; // no input 
-
-      //print_this(input); 
     }
   
-      int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, error msg already printed 
+      int quick_error = quick_error_check(input); // a return of 1 if the first or last input contained an invalid command, custom error msg already printed 
 
       if(quick_error){
         // skip the rest of the loop body, user will see "myshell> ", indicating them to use the shell again (in interactive mode)
@@ -151,12 +156,28 @@ int main(int argc, char *argv[]){
         else if(strcmp(input[0], "pause") == 0)
          successful = pause_(input); 
 
-        else if(strcmp(input[0], "quit") == 0)
-         successful = quit(input); 
+        else if(strcmp(input[0], "quit") == 0){
+          // variables that were malloced: input and parsed 
+          for(int i= 0; i<input_argc; ++i){
+
+            if(input[i])
+              continue; // already NULL 
+            
+            if(parsed[i])
+              continue; // already NULL 
+
+            free(input[i]); 
+            free(parsed[i]); 
+          }
+
+          free(input); 
+          free(parsed); 
+          successful = quit(input); 
+        }
 
     // path? 
 
-     if(successful == 1) // built-in call not succesful, print standard msg 
+     if(successful == 1 && custom_msg == 0) // built-in call not succesful, print standard msg if custom msg not already printed 
        write(STDERR_FILENO, error_message, strlen(error_message)); // have custom messages for BUILT IN, will delete 
 
       continue; // continue regardless
@@ -179,6 +200,15 @@ int main(int argc, char *argv[]){
     // even if no redirection is found, still want to store input in parsed 
     parse(input); 
 
+    // CHECK TO SEE IF CMD ACCESSIBLE
+      int ace = path_check(); 
+
+      if(ace == 1){
+        fprintf(stderr, "%s \n", "-myshell: error, command not found");
+        continue; 
+      }
+
+
     int redirection; 
 
     if((output_redirection == 1 && input_redirection == 0) || (output_redirection == 3 && input_redirection == 0))
@@ -193,25 +223,23 @@ int main(int argc, char *argv[]){
       redirection = 5; // none 
     }
 
-      run_external_command(input, redirection, background, pipe_present); 
+      int success;
+      success  = run_external_command(input, redirection, background, pipe_present); 
 
       if(background == 0){
         // background supports mutiple programs to run in a single input 
         // parse and exec, parse and exec ... until empty 
         parse(input); 
 
-      while(parsed[0] != NULL){
-        run_external_command(input, redirection, background, pipe_present); 
-        parse(input); 
-      }
+        while(parsed[0] != NULL){
+          success = run_external_command(input, redirection, background, pipe_present); 
+          parse(input); 
+        }
     } 
 
-    // if return 1 print STDERR 
+    if(success == 1 && custom_msg == 0) // ERROR, print standard msg, if custom not already printed 
+       write(STDERR_FILENO, error_message, strlen(error_message));
 
-    // if(res == 1)
-    //   write(STDERR_FILENO, error_message, strlen(error_message));
-
-    //break; 
     
   } // repeat loop 
 
@@ -644,12 +672,22 @@ int pause_(char **input){
 }
 
 int quit(char **input){
+  // already freed malloc vars 
   // exit the shell 
   // doesn't really need a return value 
 
   exit(0); 
 
   return 0; 
+}
+
+int path(char **input){
+  // path_check() will base its searching of whats added to the path here 
+  // /bin already added when the program is first run 
+
+  // char **shell_path 
+
+
 }
 
 int check_for_input_redirection(char **input){
@@ -697,7 +735,7 @@ int check_for_output_redirection(char **input){
       int invalid = check_for_invalid_file(output_file); 
 
       if(invalid == 1)
-        return 2;
+        return 2; // error 
 
       input[i+1] = NULL;
       input[i] = NULL; 
@@ -743,8 +781,7 @@ int check_for_invalid_file(char *file){
   if((strcmp(file, ">") == 0 || strcmp(file, "<") == 0) || strcmp(file, ">>") == 0 || 
     strcmp(file, "|") == 0 || strcmp(file, "&") == 0){
 
-      //fprintf(stderr, "%s %s\n", "-myshell: error, unexecpted token: ", file);
-      write(STDERR_FILENO, error_message, strlen(error_message)); 
+      fprintf(stderr, "%s %s\n", "-myshell: error, unexecpted token: ", file);
       return 1; 
       }
   
@@ -877,7 +914,11 @@ int run_external_command(char **input, int redirection, int background, int pipe
   int pipe_found = pipe_present; 
  
   if(pipe_found == 0){
-    run_external_cmd_pipe(pipe_found); // make use of *write_side[] and *read_side[] 
+    int success = run_external_cmd_pipe(pipe_found); // make use of *write_side[] and *read_side[] 
+
+    if(success == 1)
+      return 1; // error 
+
     wait(NULL); 
     return 0; // success, both sides pipe exec properly 
   }
@@ -886,7 +927,6 @@ int run_external_command(char **input, int redirection, int background, int pipe
   int execute; 
 
   if(pid == -1){
-    //write(STDERR_FILENO, error_message, strlen(error_message)); 
     return 1; 
   }
 
@@ -898,22 +938,39 @@ int run_external_command(char **input, int redirection, int background, int pipe
       // input redirection < 
 
       file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO); 
-      dup2(file_des, 0); // newfd is stdin, for which dup2 will make a copy of. input is redirected to the "input_file"
+      //dup2(file_des, 0); 
+
+      // newfd is stdin, for which dup2 will make a copy of. input is redirected to the "input_file"
+      if(dup2(file_des, 0) == -1){
+        close(file_des);
+        return 1; 
+      }  
+
     }
 
     else if(redirection == 1){
       // output redirection > 
 
       file_des = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
-      dup2(file_des, 1); // newfd is stdout, for which dup2 will make a copy of. output is redirected to the "output_file"
+
+     // dup2(file_des, 1); 
+
+      // newfd is stdout, for which dup2 will make a copy of. output is redirected to the "output_file"
+      if(dup2(file_des, 1) == -1){
+        close(file_des);
+        return 1; 
+      }   
     }
 
-    else if(redirection == 2)
-      return 1; // // FIX FIX error message already printed, when you return already at end of the loop body 
+    else if(redirection == 2){
+      custom_msg = 1; 
+      return 1;  //error message already printed, when you return already at end of the loop body 
+    }
 
     else if(redirection == 3){
       // output redirection APPEND >>  
       file_des = open(output_file, O_WRONLY | O_CREAT  | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO); // dont truncate file 
+
       // newfd is stdout, for which dup2 will make a copy of. output is redirected to the "output_file"
       if(dup2(file_des, 1) == -1){
         close(file_des);
@@ -928,7 +985,13 @@ int run_external_command(char **input, int redirection, int background, int pipe
       // (> or >>) and <  
 
       file_des = open(input_file, O_RDONLY | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
-      dup2(file_des, 0); 
+      if(dup2(file_des, 0) == -1){
+        close(file_des);
+        return 1; 
+      }
+
+      //dup2(file_des, 0); 
+
       close(file_des); 
  
       if(append == 1){
@@ -940,7 +1003,13 @@ int run_external_command(char **input, int redirection, int background, int pipe
       file_des_two = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);  
       }
 
-      dup2(file_des_two, 1); 
+      //dup2(file_des_two, 1); 
+
+      if(dup2(file_des, 1) == -1){
+        close(file_des);
+        return 1; 
+      } 
+
       close(file_des_two); 
     }
 
@@ -962,15 +1031,11 @@ int run_external_command(char **input, int redirection, int background, int pipe
   }
   
   else{
-
-    //wait(NULL); // wait for child to finish 
-    waitpid(pid, NULL, 0); 
-
-  // }
-
+    // PARENT 
+    waitpid(pid, NULL, 0); // wait for child to finish, dont want myshell> to appear before output 
   }
 
-  return 0; 
+  return 0; // success 
 }
 
 int run_external_cmd_pipe(int pipe_present){
@@ -1043,7 +1108,53 @@ int run_external_cmd_pipe(int pipe_present){
     // double check, close 
     close(pipe_fd[0]);
     close(pipe_fd[1]); 
-
   }
 
+  return 0; // success 
+}
+
+int path_check(){
+  // PATH starts with /bin  
+  // if enter cmd ls
+  // need to concat /bin/ with ls --> /bin/ls to use access()
+  // if user program, not in /bin, different loop use access() with ./program 
+  // mutiple ways to get confirmation, test cmd against all directories 
+
+  int yes; 
+
+  char pathname[150]; 
+  pathname[0] = '\0'; 
+
+  int path_size = 1; 
+
+  // WILL FIX after I do path function, this is just testing 
+  for(int i=0; i<path_size; ++i){
+    strcpy(pathname, shell_path[i]); 
+    strcat(pathname, "/");
+    strcat(pathname, parsed[0]);
+
+    int ace = access(pathname, X_OK); 
+
+    if(ace == 0)
+      yes = 1; 
+
+    memset(pathname, 0, sizeof(pathname)); 
+  }
+
+
+  memset(pathname, 0, sizeof(pathname)); 
+  // a program wont need / 
+  strcpy(pathname, parsed[0]);
+  int ace = access(pathname, X_OK);
+
+  if(ace == 0)
+    yes = 1;  
+      
+  //printf("pathname: %s\n", pathname); 
+
+  if(yes == 1)
+    return 0; // command is available 
+  else
+    return 1; // command not found 
+  
 }
