@@ -74,7 +74,7 @@ Note: myshell is bit more simpler with the use of &, better described as paralle
 # Built in commands 
 ## cd 
 "change directory" command takes either 0 or 1 argument. If there are no arguments passed, cd  will report the current directory the user is in. 
-<br />`/home/andreas/3207-projects/3207-Projects/project2  myshell> cd` 
+<br /><br />`/home/andreas/3207-projects/3207-Projects/project2  myshell> cd` 
 <br />**`cwd: /home/andreas/3207-projects/3207-Projects/project2`**  
 
 If there is an argument passed; ex. myshell>   cd <directory>. The command will change the 
@@ -104,8 +104,8 @@ The dir command, takes 0 or 1 arguments. If no argument is specified dir will
 display the contents on the current working directory to the screen or to a specified file.
 Otherwise, argument specified should be the <directory> whose contents the user wants
 to see displayed to the screen or to a specified file. Contents include folders and files, and if the <directory> doesn’t exist, an error will display. 
-<br /> `myshell> dir`
-<br /> **`Dir8 Dir9 file20 file21 `**
+<br /><br /> `myshell> dir`
+<br /> **`Dir8 Dir9 file20 file21`**
 
 <br /> `myshell>  dir  .. **(previous directory)` 
 <br /> **`Dir6 Dir7 file4 file19`**
