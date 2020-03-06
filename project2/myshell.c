@@ -32,7 +32,7 @@ int path(char **input);
 
 void print_this(char **print_this); 
 void parse(char **input); 
-int path_check(); 
+int path_check(char *cmd); 
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
 int check_for_pipe(char **input); // check for single pipe
 int check_for_background(char **input); 
@@ -74,7 +74,11 @@ int main(int argc, char *argv[]){
 
   shell_path = malloc(sizeof(char) * 200); 
   shell_path[0] = "/bin"; // program starts with one directory 
-  path_len = 1; 
+  shell_path[1] = "/usr/bin";
+  shell_path[2] = "/usr/share/man/man1/wc.1.gz"; // for wc -c 
+  shell_path[3] = "/sbin"; 
+  //print_this(shell_path); 
+  path_len = 4; 
 
   start_here = 0; 
   
@@ -105,6 +109,11 @@ int main(int argc, char *argv[]){
 
       if(input == NULL)
         exit(0); // reached EOF 
+
+      if(strcmp(input[0], "blank") == 0){
+        // first entry in batch file was blank, dont want seg. fault 
+        continue; 
+      }
     }
 
     else{
@@ -214,12 +223,27 @@ int main(int argc, char *argv[]){
     // even if no redirection is found, still want to store input in parsed 
     parse(input); 
 
-    // check to see if cmd is accessible
-    int ace = path_check(); 
 
-    if(ace == 1){
-      fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path**");
-      continue; 
+    // check to see if cmd is accessible, if pipe is present check both commands 
+    if(pipe_present == 0){
+      // check both commands 
+      int ace = path_check(write_side[0]); 
+      int ace2 = path_check(read_side[0]);  
+
+      if((ace == 1) || (ace2 == 1)){
+        fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path or use whereis <command> to find the path to add**");
+        continue; 
+      }
+    }
+
+    else{
+      // only 1 cmd to check 
+      int ace = path_check(parsed[0]); 
+
+      if(ace == 1){
+        fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path or use whereis <command> to find the path to add**");
+        continue; 
+      }
     }
 
 
@@ -320,8 +344,7 @@ char ** read_batch_file(FILE *file_ptr){
   ssize_t read = -1; 
 
   char del[] = " \n\t";  
-  char **tokens = (char **)malloc(sizeof(char*) * 50);
-
+  char **tokens = (char **)malloc(sizeof(char*) * 50); 
   read = getline(&line, &len, file_ptr);
 
   if(read == -1){
@@ -329,9 +352,17 @@ char ** read_batch_file(FILE *file_ptr){
     return NULL; 
   }
 
-  int i = 0; 
+  int i = 0;
 
-  tokens[i] = strtok(line, del); 
+  if((read == 1)){
+    // first line is blank
+    tokens[i] = "blank"; 
+    return tokens; 
+  } 
+      
+
+  else
+    tokens[i] = strtok(line, del); 
 
   while(tokens[i] != NULL){
     //printf("\n%s\n", tokens[i]); 
@@ -424,7 +455,7 @@ int cd(char **input){
   if(input_argc == 1){
     // print the current directory (I already have it displayed)
 
-    printf("%s\n", getcwd(buffer, sizeof(buffer)));
+    printf("Cureent directory: %s\n", getcwd(buffer, sizeof(buffer)));
     return 0; // success 
   }
 
@@ -432,7 +463,7 @@ int cd(char **input){
 
 
   retval = chdir(input[1]); 
-  //printf("%s\n", getcwd(buffer, sizeof(buffer)));
+  printf("Current directory: %s\n", getcwd(buffer, sizeof(buffer)));
 
 
   if(retval == -1){
@@ -698,7 +729,6 @@ int path(char **input){
   for(int i = 0; i<path_len; ++i){
     shell_path[i] = NULL;  
   }
-
 
   if(input_argc == 1){
     // leave PATH empty 
@@ -1154,7 +1184,8 @@ int run_external_cmd_pipe(int pipe_present){
   return 0; // success 
 }
 
-int path_check(){
+//int path_check(){
+int path_check(char *cmd){
   // PATH starts with /bin  
   // if enter cmd ls
   // need to concat /bin/ with ls --> /bin/ls to use access()
@@ -1167,6 +1198,11 @@ int path_check(){
     return 1; 
   }
 
+  if(strstr(cmd, ".txt")){
+    // cmd can't be a file, access() is 50/50 with this 
+    return 1; 
+  }
+    
 
   if(strcmp(parsed[0], "ifconfig") == 0){
     // PATH needs to be set to /sbin to find ifconfig
@@ -1178,33 +1214,28 @@ int path_check(){
   int yes; 
   char pathname[150]; 
   pathname[0] = '\0'; 
+  int ace; 
 
   for(int i=0; i<path_len; ++i){
     strcpy(pathname, shell_path[i]); 
     strcat(pathname, "/");
-    strcat(pathname, parsed[0]);
+    strcat(pathname, cmd); 
 
-    int ace = access(pathname, X_OK); 
+    ace = access(pathname, X_OK);  
 
-    if(ace == 0)
-      yes = 1; 
+    if(ace == 0) 
+      return 0;  // command is available
+    
 
     memset(pathname, 0, sizeof(pathname)); // reset arr 
   }
 
   memset(pathname, 0, sizeof(pathname)); // reset arr 
   // a program wont need / 
-  strcpy(pathname, parsed[0]);
-  int ace = access(pathname, X_OK);
+  ace = access(cmd, X_OK);
 
-  if(ace == 0)
-    yes = 1;  
-      
-  //printf("pathname: %s\n", pathname); 
-
-  if(yes == 1)
-    return 0; // command is available 
+  if(ace == -1)
+    return 1; // program is available
   else
-    return 1; // command not found 
-  
+    return 0;  // command not found 
 }
