@@ -31,8 +31,8 @@ int quit(char **input);
 int path(char **input); 
 
 void print_this(char **print_this); 
-void parse(char **input); // trying this parse instead of shifting, I couldnt get & to work properly w/ shift 
-//int check_for_redirection(char **input); // 0 for < || 1 for > || 2 for ERORR || 3 for >> || 4 for BOTH || 5 for NONE
+void parse(char **input); 
+int path_check(); 
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
 int check_for_pipe(char **input); // check for single pipe
 int check_for_background(char **input); 
@@ -43,7 +43,6 @@ int check_for_output_redirection(char **input);
 int run_external_command(char **input, int redirection, int background, int pipe_present); 
 int run_external_cmd_pipe(int pipe_present); // run_external_command was too cluttered, simplifed viewing 
 
-int path_check(); 
 
 // basic global var 
 char *commands[] = {"cd", "clr", "dir", "environ", "echo", "help", "pause", "quit", "path"}; 
@@ -63,8 +62,10 @@ int pipe_index;
 
 // get input, store in input, parse, store in parsed
 char **parsed; 
-
+int parsed_len; 
+// out PATH, will init with /bin, able to find all our unix commands there (ex. /bin/ls), built-ins always run, user program's exe in current directory (ex. ./greet) 
 char **shell_path; 
+int path_len; 
 
 
 int main(int argc, char *argv[]){
@@ -72,9 +73,8 @@ int main(int argc, char *argv[]){
   FILE *fptr = NULL;
 
   shell_path = malloc(sizeof(char) * 200); 
-
-  // UNDO LATER 
   shell_path[0] = "/bin"; // program starts with one directory 
+  path_len = 1; 
 
   start_here = 0; 
   
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]){
 
     // reset var 
     char **input = NULL;  
-    input_argc = 0, start_here = 0, custom_msg = 0; 
+    input_argc = 0, start_here = 0, custom_msg = 0, parsed_len = 0; 
     input_file = NULL, output_file = NULL; 
     parsed = NULL; 
 
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]){
         else if(strcmp(input[0], "environ") == 0)
          successful = environ(input); 
 
-       else if(strcmp(input[0], "echo") == 0) 
+        else if(strcmp(input[0], "echo") == 0) 
          successful = echo(input); 
 
         else if(strcmp(input[0], "help") == 0)
@@ -161,24 +161,25 @@ int main(int argc, char *argv[]){
 
         else if(strcmp(input[0], "quit") == 0){
           // variables that were malloced: input, parsed, and shell_path 
+          // b/c double ptr, free each string 
           int already_null, already_null2, already_null3 = 1;  
-          for(int i= 0; i<input_argc; ++i){
 
-            if(input[i])
-              already_null = 0; 
-            
+          for(int i=0; i<input_argc; ++i){
+            if(input[i]) // already NULL 
+              continue; 
+            free(input[i]);  
+          }
+
+          for(int i=0; i<parsed_len; ++i){
             if(parsed[i])
-              already_null2 = 0;
+              continue; 
+            free(parsed[i]); 
+          }
 
-            if(shell_path[i])
-              already_null3 = 0; 
-
-            if(already_null)
-              free(input[i]);
-            if(already_null2)   
-              free(parsed[i]); 
-            if(already_null3)
-              free(shell_path[i]); 
+          for(int i=0; i<path_len; ++i){
+             if(shell_path[i])
+              continue; 
+            free(shell_path[i]); 
           }
 
           free(input); 
@@ -187,10 +188,12 @@ int main(int argc, char *argv[]){
           successful = quit(input); 
         }
 
-     if(successful == 1 && custom_msg == 0) // built-in call not succesful, print standard msg if custom msg not already printed 
-       write(STDERR_FILENO, error_message, strlen(error_message)); // have custom messages for BUILT IN, will delete 
+        // built-in call not succesful, print standard msg if custom msg not already printed 
+        if(successful == 1 && custom_msg == 0){
+          write(STDERR_FILENO, error_message, strlen(error_message)); 
+        }
 
-      continue; // continue regardless
+        continue; // continue regardless
     } // OUTSIDE BUILT_IN
 
 
@@ -259,6 +262,7 @@ int main(int argc, char *argv[]){
 
 
 char** get_user_input(){
+  // getline() from user, store input in tokens, specified by a space (or tab), get a count (will be our argc)
 
   char *line = NULL;
   size_t len = 0; 
@@ -287,19 +291,9 @@ char** get_user_input(){
     ++input_argc; 
     ++i; 
 
-    // FIX THIS 
-
-    // if((isspace(tokens[i]) != 0)){  
-    // // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
-    // // every string added to tokens[i] will be a nonspace 
-    //   --i; 
-    // }
-   
-
     tokens[i] = strtok(NULL, del);  
   }
  
-  //tokens[i] = '\0';  // added null terminator, just for reassurance 
   tokens[i] = NULL; 
 
   int count = 0; 
@@ -318,14 +312,13 @@ char** get_user_input(){
 }
 
 char ** read_batch_file(FILE *file_ptr){
-  // get input from batch file 
-  // READ a line, execute that cmd, read next line, execute that cmd, ...  
+  // get input from batch file, similar technique to get_input()
+  // READ a line, execute that cmd, read next line, execute that cmd, ...  until EOF  
 
   char *line = NULL;
   size_t len = 0; 
   ssize_t read = -1; 
 
-  //char **input = NULL; 
   char del[] = " \n\t";  
   char **tokens = (char **)malloc(sizeof(char*) * 50);
 
@@ -345,25 +338,17 @@ char ** read_batch_file(FILE *file_ptr){
     ++input_argc; 
     ++i; 
 
-    // if(isspace(tokens[i])){ 
-    // // if the token contains an "empty" string (\n, \t, " "), decrement the count of i to replace that string 
-    // // every string added to tokens[i] will be a nonspace
-    //   --i; 
-    // }
-    
     tokens[i] = strtok(NULL, del); 
   }
 
-  //tokens[i] = '\0';  // added null terminator, just for reassurance 
   tokens[i] = NULL; 
 
-  return tokens;
-  //return input; 
+  return tokens; 
 }
 
 int quick_error_check(char **input){
   // Quickly iterate through the array, input[0] and input[n-1] can't have any redirection, control, or pipe symbol. 
-  // Global variable input_argc should have the count. 
+  // prints a custom error msg 
   
   char *cant_start[5] = {"|", ">", "<", ">>", "&"};
   char *cant_end[4] = {"|", ">", "<", ">>"}; // can end with "&"
@@ -390,7 +375,7 @@ int is_built_in_command(char **input){
 
   for(int j = 0; j<(input_argc-1); ++j){
     // don't have direct implementation of piping for a built-in,
-    // just testing, treat as external
+    // JUST TESTING, treat as external
     // echo hello | wc -c 
     if(input[j] == NULL)
       continue; 
@@ -406,7 +391,7 @@ int is_built_in_command(char **input){
     // Note: errors will be checked inside the respective function, so if the user inputs "help clear", too many args will be found inside the 
     // the help function. 
     if(strcmp(input[0], commands[i]) == 0)
-      return 0; 
+      return 0; // YES, is built_in
   }
 
   return 1; // not built_in
@@ -707,8 +692,10 @@ int path(char **input){
     ++counter; 
   }
 
+  path_len = count; // update count 
+
   // reset PATH to overwrite   
-  for(int i = 0; i<count; ++i){
+  for(int i = 0; i<path_len; ++i){
     shell_path[i] = NULL;  
   }
 
@@ -861,6 +848,17 @@ void parse(char **input){
   start_here = i+1;  // ingore the null for the next parse, otherwise this gets reset to 0 at reset of loop 
 
   //print_this(parsed); 
+
+  char **counter = parsed;
+  int count = 0;  
+
+  while(*counter != NULL){
+    ++count;
+    ++counter; 
+  }
+
+  parsed_len = count; // only used to get correct length for loop to correctly free up memory 
+
 }
 
 void print_this(char **print_this){
@@ -1165,19 +1163,23 @@ int path_check(){
 
 
   if(shell_path[0] == NULL){
-    // shell_path empty, can only run built-ns 
+    // shell_path empty, can only run built-ins 
     return 1; 
   }
 
-  int yes; 
 
+  if(strcmp(parsed[0], "ifconfig") == 0){
+    // PATH needs to be set to /sbin to find ifconfig
+    // instructions state only start with /bin, I'll let isconfig pass without added /sbin as the user might not know 
+    // if this is read, call path /bin /sbin to add /sbin to PATH to find ifconfig command 
+    return 0; 
+  }
+
+  int yes; 
   char pathname[150]; 
   pathname[0] = '\0'; 
 
-  int path_size = 1; 
-
-  // WILL FIX after I do path function, this is just testing 
-  for(int i=0; i<path_size; ++i){
+  for(int i=0; i<path_len; ++i){
     strcpy(pathname, shell_path[i]); 
     strcat(pathname, "/");
     strcat(pathname, parsed[0]);
@@ -1187,11 +1189,10 @@ int path_check(){
     if(ace == 0)
       yes = 1; 
 
-    memset(pathname, 0, sizeof(pathname)); 
+    memset(pathname, 0, sizeof(pathname)); // reset arr 
   }
 
-
-  memset(pathname, 0, sizeof(pathname)); 
+  memset(pathname, 0, sizeof(pathname)); // reset arr 
   // a program wont need / 
   strcpy(pathname, parsed[0]);
   int ace = access(pathname, X_OK);
