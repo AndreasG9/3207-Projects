@@ -29,7 +29,6 @@ int help(char **input);
 int pause_(char **input); 
 int quit(char **input);
 int path(char **input); 
-// path 
 
 void print_this(char **print_this); 
 void parse(char **input); // trying this parse instead of shifting, I couldnt get & to work properly w/ shift 
@@ -73,10 +72,11 @@ int main(int argc, char *argv[]){
   FILE *fptr = NULL;
 
   shell_path = malloc(sizeof(char) * 200); 
+
+  // UNDO LATER 
   shell_path[0] = "/bin"; // program starts with one directory 
 
   start_here = 0; 
-  //parsed = NULL;
   
   int batch_present = 1; 
 
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
     char **input = NULL;  
     input_argc = 0, start_here = 0, custom_msg = 0; 
     input_file = NULL, output_file = NULL; 
-    parsed == NULL; 
+    parsed = NULL; 
 
     if(batch_present == 0){ 
       puts(""); // space between outputs 
@@ -156,32 +156,43 @@ int main(int argc, char *argv[]){
         else if(strcmp(input[0], "pause") == 0)
          successful = pause_(input); 
 
+        else if(strcmp(input[0], "path") == 0)
+          successful = path(input);
+
         else if(strcmp(input[0], "quit") == 0){
-          // variables that were malloced: input and parsed 
+          // variables that were malloced: input, parsed, and shell_path 
+          int already_null, already_null2, already_null3 = 1;  
           for(int i= 0; i<input_argc; ++i){
 
             if(input[i])
-              continue; // already NULL 
+              already_null = 0; 
             
             if(parsed[i])
-              continue; // already NULL 
+              already_null2 = 0;
 
-            free(input[i]); 
-            free(parsed[i]); 
+            if(shell_path[i])
+              already_null3 = 0; 
+
+            if(already_null)
+              free(input[i]);
+            if(already_null2)   
+              free(parsed[i]); 
+            if(already_null3)
+              free(shell_path[i]); 
           }
 
           free(input); 
           free(parsed); 
+          free(shell_path); 
           successful = quit(input); 
         }
-
-    // path? 
 
      if(successful == 1 && custom_msg == 0) // built-in call not succesful, print standard msg if custom msg not already printed 
        write(STDERR_FILENO, error_message, strlen(error_message)); // have custom messages for BUILT IN, will delete 
 
       continue; // continue regardless
-    }
+    } // OUTSIDE BUILT_IN
+
 
     int input_redirection = check_for_input_redirection(input); 
 
@@ -200,13 +211,13 @@ int main(int argc, char *argv[]){
     // even if no redirection is found, still want to store input in parsed 
     parse(input); 
 
-    // CHECK TO SEE IF CMD ACCESSIBLE
-      int ace = path_check(); 
+    // check to see if cmd is accessible
+    int ace = path_check(); 
 
-      if(ace == 1){
-        fprintf(stderr, "%s \n", "-myshell: error, command not found");
-        continue; 
-      }
+    if(ace == 1){
+      fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path**");
+      continue; 
+    }
 
 
     int redirection; 
@@ -684,10 +695,43 @@ int quit(char **input){
 int path(char **input){
   // path_check() will base its searching of whats added to the path here 
   // /bin already added when the program is first run 
+  // OVERWRITE EACH CALL 
+ 
 
-  // char **shell_path 
+  // get current size of path
+  char **counter = shell_path;
+  int count = 0;  
+
+  while(*counter != NULL){
+    ++count;
+    ++counter; 
+  }
+
+  // reset PATH to overwrite   
+  for(int i = 0; i<count; ++i){
+    shell_path[i] = NULL;  
+  }
 
 
+  if(input_argc == 1){
+    // leave PATH empty 
+    puts("WARNING, you set the path to empty, to undo call path /bin"); 
+    return 0; 
+  }
+    
+  int j = 0; 
+
+  for(int i = 1; i<input_argc; ++i){
+    // OVERWRITE add strings to path 
+    shell_path[j] = input[i]; 
+    //printf("%s", shell_path[j]); 
+    ++j; 
+  }
+
+  printf("%s", "Shell Path Now ... \n");
+  print_this(shell_path);  
+
+  return 0; 
 }
 
 int check_for_input_redirection(char **input){
@@ -829,7 +873,6 @@ void print_this(char **print_this){
     ++print; 
   }
 
-  puts("");
 }
 
 int check_for_pipe(char **input){
@@ -1119,6 +1162,12 @@ int path_check(){
   // need to concat /bin/ with ls --> /bin/ls to use access()
   // if user program, not in /bin, different loop use access() with ./program 
   // mutiple ways to get confirmation, test cmd against all directories 
+
+
+  if(shell_path[0] == NULL){
+    // shell_path empty, can only run built-ns 
+    return 1; 
+  }
 
   int yes; 
 
