@@ -166,13 +166,15 @@ The quit command, takes 0 argument, and will exit / close myshell after all mall
 
 ## path 
 Takes 0 or more arguments, and will overwrite out custom PATH with each call. If no path if entered, the path is set to empty and only
-built in commands will run, until you call path and at least add /bin 
+built in commands will run, until you call path and at least add /bin. With each call, make sure you seperate path additions with a space path /bin /sbin ... 
 
 <br /> <br />`myshell> path`
 <br />**WARNING, you set the path to empty, to undo call path /bin**
 <br />myshell> ls 
 <br />**-myshell: error, unix command or program not found**
 <br />**Check that /bin is part of path**
+
+<br /> The ls executable cannot be found as its located in /bin/ls 
 
 <br /> <br />`myshell> path /bin`
 <br />**Shell Path Now ...**
