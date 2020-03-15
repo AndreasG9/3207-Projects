@@ -34,7 +34,7 @@ void print_this(char **print_this);
 void parse(char **input); 
 int path_check(char *cmd); 
 int check_for_invalid_file(char *file); // ex. output redirection is present, input[i+1] is stored, check that input[i+1] is not another symbol, needs to be a file  
-int check_for_pipe(char **input); // check for single pipe
+int check_for_pipe(char **input); 
 int check_for_background(char **input); 
 
 int check_for_input_redirection(char **input); 
@@ -170,8 +170,7 @@ int main(int argc, char *argv[]){
 
         else if(strcmp(input[0], "quit") == 0){
           // variables that were malloced: input, parsed, and shell_path 
-          // b/c double ptr, free each string 
-          int already_null, already_null2, already_null3 = 1;  
+          // b/c double ptr, free each string  
 
           for(int i=0; i<input_argc; ++i){
             if(input[i]) // already NULL 
@@ -230,9 +229,14 @@ int main(int argc, char *argv[]){
       int ace = path_check(write_side[0]); 
       int ace2 = path_check(read_side[0]);  
 
-      if((ace == 1) || (ace2 == 1)){
-        fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path or use whereis <command> to find the path to add**");
+      if(ace == 1){
+        fprintf(stderr, "%s\t%s\t%s\n", "-myshell: error command/program\t",write_side[0], "\tnot found**Check that /bin is part of path or use whereis <command> to find the path to add**");
         continue; 
+      }
+
+      if(ace2 == 1){
+        fprintf(stderr, "%s\t%s\t%s\n", "-myshell: error command/program ",read_side[0], " not found**Check that /bin is part of path or use whereis <command> to find the path to add**");
+        continue;
       }
     }
 
@@ -241,7 +245,7 @@ int main(int argc, char *argv[]){
       int ace = path_check(parsed[0]); 
 
       if(ace == 1){
-        fprintf(stderr, "%s \n", "-myshell: error, unix command or program not found\n**Check that /bin is part of path or use whereis <command> to find the path to add**");
+        fprintf(stderr, "%s\t%s\t%s\n", "-myshell: error command/program ",parsed[0], " not found**Check that /bin is part of path or use whereis <command> to find the path to add**");
         continue; 
       }
     }
@@ -433,6 +437,7 @@ int clr(char **input){
 
   if(input_argc > 1){
     fprintf(stderr, "%s \n", "-myshell: error, clr takes no arguments");
+    custom_msg = 1; 
     return 1; 
   }
 
@@ -447,6 +452,7 @@ int cd(char **input){
 
   if(input_argc > 2){
     fprintf(stderr, "%s \n", "-myshell: error, cd takes 1 argument"); 
+    custom_msg = 1; 
     return 1; 
   }
 
@@ -463,13 +469,13 @@ int cd(char **input){
 
 
   retval = chdir(input[1]); 
-  printf("Current directory: %s\n", getcwd(buffer, sizeof(buffer)));
-
 
   if(retval == -1){
     fprintf(stderr, "%s \n", "-myshell: error, directory does not exist"); 
+    custom_msg = 1;
     return 1; 
   }
+  printf("Current directory: %s\n", getcwd(buffer, sizeof(buffer)));
 
   return 0; 
 }
@@ -495,31 +501,46 @@ int dir(char **input){
   if(output_redirection == 1 || output_redirection == 3){
     if(fptr == NULL){
       fprintf(stderr, "%s \n", "-myshell: error, could not open output file");
+      custom_msg = 1;
       return 1; 
     }
   }
 
   if((input_argc > 2) && (output_redirection != 1) && (output_redirection != 3)){ // no redirection present, too many args 
     fprintf(stderr, "%s \n", "-myshell: error, too many args");
+    custom_msg = 1;
     return 1; 
   }
 
 
   if(input_argc == 1) // will print contents of the current dir 
     name = getcwd(name, 150); 
+  
+  else if(output_redirection == 1 || output_redirection == 3){
+  
+    if(input[1] == NULL){
+      // print current dir 
+      name = getcwd(name, 150); 
+    }
+    else{
+      // user passed argument
+      name = input[1]; 
+    }
+  }
 
-  else if(input_argc > 1) // user passed argument
-    name = input[1]; 
-   
+  else// if(input_argc > 1) 
+    name = input[1]; // user passed argument
+
 
   DIR *directory = NULL;
-	struct dirent *directory_entry = NULL; 
+	struct dirent *directory_entry = NULL;  
   directory = opendir(name); 
-
   if(directory == NULL){
     fprintf(stderr, "%s \n", "-myshell: error, <directory> not found");
+    custom_msg = 1;
     return 1; 
   }
+
 
   // read from directory, print to screen or redirection output 
   while((directory_entry = readdir(directory)) != NULL){
@@ -548,6 +569,7 @@ int environ(char **input){
   
   if((input_argc > 1) && output_redirection != 1 && output_redirection != 3){
     fprintf(stderr, "%s \n", "-myshell: error, this command environ takes no args");
+    custom_msg = 1;
     return 1; 
   }
 
@@ -576,7 +598,8 @@ int environ(char **input){
       fptr = fopen(output_file, "a"); 
 
     if(fptr == NULL){
-      //fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      custom_msg = 1;
       return 1; 
     }
 
@@ -620,6 +643,7 @@ int echo(char **input){
 
     if(fptr == NULL){
       fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      custom_msg = 1;
       return 1; 
     }
 
@@ -645,6 +669,7 @@ int help(char **input){
 
   if(fptr == NULL){
     fprintf(stderr, "%s \n", "-myshell: error, could not open \"help.txt\"");
+    custom_msg = 1;
     return 1; 
   }
 
@@ -673,6 +698,7 @@ int help(char **input){
  
     if(fptr2 == NULL){
       fprintf(stderr, "%s \n", "-myshell: error, cannot open output file");
+      custom_msg = 1;
       return 1; 
     }
  
@@ -725,21 +751,24 @@ int path(char **input){
 
   path_len = count; // update count 
 
+  if(*input[0] != '/'){
+    // PATH added needs to start with  / 
+    // dont reset in case this is accidently the input
+    fprintf(stderr, "%s \n", "-myshell: WARNING, need to start path with '/', ex. path /bin\n"); 
+    custom_msg = 1; 
+    return 1;  
+  }
+
   // reset PATH to overwrite   
   for(int i = 0; i<path_len; ++i){
     shell_path[i] = NULL;  
   }
 
-  if(input_argc == 1){
-    // leave PATH empty 
-    puts("WARNING, you set the path to empty, to undo call path /bin"); 
-    return 0; 
-  }
-    
   int j = 0; 
 
   for(int i = 1; i<input_argc; ++i){
     // OVERWRITE add strings to path 
+    
     shell_path[j] = input[i]; 
     //printf("%s", shell_path[j]); 
     ++j; 
@@ -990,7 +1019,8 @@ int run_external_command(char **input, int redirection, int background, int pipe
     if(success == 1)
       return 1; // error 
 
-    wait(NULL); 
+
+    wait(NULL); // wait for second child process 
     return 0; // success, both sides pipe exec properly 
   }
 
@@ -1175,7 +1205,8 @@ int run_external_cmd_pipe(int pipe_present){
   }
 
   else{ 
-    waitpid(-1, NULL, 0); // wait for both  
+    // wait for first child processes to finish, when return to run_external_command, wait for the second child, before returning to myshell prompt 
+    waitpid(-1, NULL, 0); 
     // double check, close 
     close(pipe_fd[0]);
     close(pipe_fd[1]); 
@@ -1184,7 +1215,7 @@ int run_external_cmd_pipe(int pipe_present){
   return 0; // success 
 }
 
-//int path_check(){
+
 int path_check(char *cmd){
   // PATH starts with /bin  
   // if enter cmd ls
@@ -1211,7 +1242,6 @@ int path_check(char *cmd){
     return 0; 
   }
 
-  int yes; 
   char pathname[150]; 
   pathname[0] = '\0'; 
   int ace; 
