@@ -34,12 +34,12 @@ pthread_cond_t safe_to_remove = PTHREAD_COND_INITIALIZER; // condition, wait unt
 int w_threads_count; 
 
 // producer-consumer, log queue 
+char *buffer_log_Q[SIZE]; 
 int q_count2; 
 int add_index2, remove_index2; 
 pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t safe_to_add2 = PTHREAD_COND_INITIALIZER;  
 pthread_cond_t safe_to_remove2 = PTHREAD_COND_INITIALIZER;
-
 
 // main thread 
 void fill_dictionary_structure(); 
@@ -50,12 +50,15 @@ void create_worker_threads();
 // worker threads 
 void* worker_thread(); 
 int remove_from_connection_queue(); 
-void print_queue(); // testing 
+void add_to_log_queue(char *result); 
+
 
 // log thread 
+void* log_thread();
+char* remove_from_log_queue(); 
 
 
-
+void print_queue(); // testing 
 
 int main (int argc, char *argv[]){
   // main thread 
@@ -85,6 +88,9 @@ int main (int argc, char *argv[]){
   port_number = DEFAULT_PORT; 
   q_count = 0, add_index = 0, remove_index = 0; 
   w_threads_count = 0; 
+
+  q_count2 = 0, add_index2 = 0, remove_index2 = 0; 
+
 
   char *word = malloc(sizeof(char*) * 1024); 
   // printf("Testing! Enter a word: ");
@@ -147,11 +153,12 @@ int main (int argc, char *argv[]){
 
 
     add_to_connection_queue(new_socket); // add the socket to the queue, which is the fixed circular char buffer_connection_Q[SIZE]
-    ++w_threads_count; 
-    create_worker_threads(); // spawn worker threads who remove data from queue (consumer)
-    // spawn log thread 
 
-    // repeat loop ... 
+    ++w_threads_count; 
+    create_worker_threads(); // spawn worker threads who remove data from queue (consumer), will write to socket the word + OK/MISSPELLED
+
+    log_thread(); // spawn log thread
+    
   }
 
   return 0; 
@@ -304,69 +311,145 @@ void* worker_thread(){
   // use check_dictionary(char *word) to check spelling
   // add result to log queue 
   // loop, until client leaves, close socket 
-   puts("\nin worker_thread() function"); 
+  puts("\nin worker_thread() function"); 
 
   char word[75]; // I don't think a word will be longer 
   
   int sd = remove_from_connection_queue();  // remove sd from queue 
 
-
   while(1){
-  ssize_t bytes_read = read(sd, word, 75); 
+    // loop until read/write fails / client disconnects (FIX) 
 
-  if(bytes_read == -1){
-    fprintf(stderr, "%s", "Failed to read word"); 
-  }
-
-  // remove extra space added, 
-  char del[] = " \n\t";  
-  char *check_word = strtok(word, del); 
-
-  //printf("Word to br written: %s\n", check_word); 
-
-
-  int res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
-
-  char word_plus_status[100] = ""; // strcat, word + space + status 
-  strcat(word_plus_status, word); 
-  strcat(word_plus_status, " "); 
-
-  if(res == 0){
-    // found word, write "OK" to socket 
-
-    //puts("test: found"); 
-
-    strcat(word_plus_status, "OK"); 
-    printf("%s\n", word_plus_status); 
-
-    ssize_t bytes_written = write(sd, strcat, strlen(word_plus_status)); 
+    ssize_t bytes_read = read(sd, word, 75); 
 
     if(bytes_read == -1){
       fprintf(stderr, "%s", "Failed to read word"); 
     }
+
+    // // remove extra space added, 
+    char del[] = " \n\t";  
+    char *check_word = strtok(word, del); 
+
+    // int length = strlen(word); 
+    // word[length] = '\0'; // remove extra space added 
+
+    //printf("Word to br written: %s\n", check_word); 
+
+
+    int res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+
+    char word_plus_status[100] = ""; // strcat, word + space + status 
+    strcat(word_plus_status, word); 
+    strcat(word_plus_status, "\t"); 
+
+    if(res == 0){
+      // found word, write "OK" to socket 
+
+      strcat(word_plus_status, "OK"); 
+      strcat(word_plus_status, "\n"); 
+
+      ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); 
+
+      if(bytes_read == -1){
+        fprintf(stderr, "%s", "Failed to read word"); 
+         
+      }
+   }
+
+    else{
+      // not found, write "MISPELLED" to socket 
+
+      strcat(word_plus_status, "MISSPELLED");  
+      strcat(word_plus_status, "\n"); 
+
+      ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); 
+
+      if(bytes_read == -1){
+       fprintf(stderr, "%s", "Failed to read word"); 
+       break; 
+     }
+   }
+
+   printf("Value to be written: %s\n", word_plus_status); 
+
+
+    // add word_plus_status to log queue 
+    add_to_log_queue(word_plus_status); 
+    
+  } // error / client disconected 
+
+  // close socket (in main ?? close(socket ...))
+
+
+}
+
+void add_to_log_queue(char *result){
+  // worker thread (producer)
+  // same implementation as add_to_connection_queue(int socket) ... 
+  // char *buffer_log_Q[SIZE]; 
+
+
+  pthread_mutex_lock(&lock2); // get lock 
+
+  while(q_count2 == SIZE){
+    // while queue is full, relase lock and wait, for condition (can add to queue) to be satisfied. 
+    pthread_cond_wait(&safe_to_add2, &lock2); 
   }
 
-  else{
-    // not found, write "MISPELLED" to socket 
+  // at this point, lock was re-aquired, safe to add to queue  
+  buffer_log_Q[add_index2] = result; // result (WORD + OK/MISSPELLED) to add 
 
-   // puts("test: no"); 
+  printf("\n%s\n", buffer_log_Q[add_index2]); 
 
-    strcat(word_plus_status, "MISSPELLED"); 
-    printf("%s\n", word_plus_status); 
+  add_index2 = (add_index2 + 1) % SIZE; 
+  ++q_count2; 
 
-    ssize_t bytes_written = write(sd, strcat, strlen(word_plus_status)); 
+  // if add_index count == SIZE/ MAX, reset to 0, signal consumer as Queue is filled 
 
-    if(bytes_read == -1){
-      fprintf(stderr, "%s", "Failed to read word"); 
-    }
+  pthread_cond_signal(&safe_to_remove2); // wake the consumer, safe to remove data from queue now 
+  pthread_mutex_unlock(&lock2);
+
+}
+
+char* remove_from_log_queue(){
+  // log thread (consumer)
+  // same implementation ass remove_from_connection_queue() ... 
+
+  pthread_mutex_lock(&lock2); // get lock 
+
+  while(q_count2 == 0){
+    // while queue is empty, release lock and wait, for condiition (can remove data from queue)
+    pthread_cond_wait(&safe_to_remove2, &lock2); 
   }
 
-  // add word_plus_status to log queue 
+  // safe to remove data from queue 
+  char *temp = buffer_log_Q[remove_index2]; 
+  remove_index2 = (remove_index2 + 1) % SIZE; 
+  --q_count2; 
+
+  //
+
+  pthread_cond_signal(&safe_to_add2); // wake up producer, safe to add data 
+  pthread_mutex_unlock(&lock2); 
+  
+  return temp; 
+}
+
+void* log_thread(){
+  // take string message (word + OK/MISSPELLED), write to log file 
+
+  FILE *fptr2 = fopen("data.log", "a+"); // MAIN 
+
+  char *append = remove_from_log_queue(); 
+
+  // add to log file 
+
+  fwrite(append, 1, sizeof(append), fptr2); 
+  fwrite("\n", 1, 1, fptr2); 
 
 
-  } // error, or client disconected 
 
-
+  fclose(fptr2); 
 }
 
 
