@@ -21,27 +21,32 @@ char *dictionary; // default is "dictionary.txt"
 char **dictionary_stored_here; // every string in dictionary, stored here, accessible by all threads 
 int dictionary_count; // too allocate enough memory for double ptr (each string ref by ptr)
 
-int port_number; // make local 
 
+// producer-consumer, connection queue 
 int buffer_connection_Q[SIZE]; 
 int q_count; 
 int add_index, remove_index; 
 
-// add to connection queue
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER; 
 pthread_cond_t safe_to_add = PTHREAD_COND_INITIALIZER; // condition, wait until space available to add to queue 
 pthread_cond_t safe_to_remove = PTHREAD_COND_INITIALIZER; // condition, wait until you can remove data from queue 
-
+//pthread_cond_init(safe_to_add); 
+int w_threads_count; 
 
 // main thread 
 void fill_dictionary_structure(); 
 int check_dictionary(char *word); 
 void add_to_connection_queue(int socket); 
-void remove_from_connection_queue(); 
-
-void print_queue(); // tesitng 
-
 void create_worker_threads(); 
+
+// worker threads 
+void* worker_thread(); 
+int remove_from_connection_queue(); 
+void print_queue(); // testing 
+
+// log thread 
+
+
 
 
 int main (int argc, char *argv[]){
@@ -64,11 +69,14 @@ int main (int argc, char *argv[]){
   }
   */ 
 
+  int port_number;  
+
   // use defaults for now
   dictionary = NULL; 
   dictionary = DEFAULT_DICTIONARY;
   port_number = DEFAULT_PORT; 
   q_count = 0, add_index = 0, remove_index = 0; 
+  w_threads_count = 0; 
 
   char *word = malloc(sizeof(char*) * 1024); 
   // printf("Testing! Enter a word: ");
@@ -108,7 +116,7 @@ int main (int argc, char *argv[]){
   // Bind (convert the server's socket address to the socket descriptor)
   int bind_result = bind(socket_desc, (struct sockaddr*)&server, sizeof(server));
   if (bind_result < 0){
-	  puts("Error: failed to Bind.");
+	  fprintf(stderr, "%s","Error: failed to Bind.");
 	  exit(1);
   }
 
@@ -124,19 +132,19 @@ int main (int argc, char *argv[]){
 	  new_socket = accept(socket_desc, (struct sockaddr*)&client, (socklen_t*)&c);
 
 	  if (new_socket < 0){
-	    puts("Error: Accept failed");
+	    fprintf(stderr, "%s","Error: Accept failed");
 	    continue;
-	}
-	puts("Connection accepted");
+	  }
+	  fprintf(stderr, "%s","Connection accepted");
 
-  add_to_connection_queue(new_socket); // add the socket to the queue, which is the fixed circular char buffer_connection_Q[SIZE]
-  
+
+    add_to_connection_queue(new_socket); // add the socket to the queue, which is the fixed circular char buffer_connection_Q[SIZE]
+    ++w_threads_count; 
+    create_worker_threads(); // spawn worker threads who remove data from queue (consumer)
+    // spawn log thread 
+
+    // repeat loop ... 
   }
-
-
-  // create fixed-size data structure, to store the socket descriptors of clients that will connect to it 
-
-  
 
   return 0; 
 }
@@ -220,7 +228,7 @@ int check_dictionary(char *word){
 }
 
 void add_to_connection_queue(int socket){
-  // char bbuffer_connection_Q[SIZE]
+  // char buffer_connection_Q[SIZE]
 
   pthread_mutex_lock(&lock); // get lock 
 
@@ -231,7 +239,6 @@ void add_to_connection_queue(int socket){
 
   // at this point, lock was re-aquired, safe to add to queue  
   buffer_connection_Q[add_index] = socket; // socket to add 
-  //printf("%d\n", buffer_connection_Q[add_index]); 
 
   //++add_index; 
   add_index = (add_index + 1) % SIZE; 
@@ -242,6 +249,70 @@ void add_to_connection_queue(int socket){
   pthread_cond_signal(&safe_to_remove); // wake the consumer, safe to remove data from queue now 
   pthread_mutex_unlock(&lock); 
 }
+
+int remove_from_connection_queue(){
+  // consumer 
+
+  pthread_mutex_lock(&lock); // get lock 
+
+  while(q_count == 0){
+    // while queue is empty, release lock and wait, for condiition (can remove data from queue)
+    pthread_cond_wait(&safe_to_remove, &lock); 
+  }
+
+  // safe to remove data from queue 
+  int temp = buffer_connection_Q[remove_index]; 
+  remove_index = (remove_index + 1) % SIZE; 
+  --q_count; 
+
+  //
+
+  pthread_cond_signal(&safe_to_add); // wake up producer, safe to add data 
+  pthread_mutex_unlock(&lock); 
+
+  return temp; 
+}
+
+void create_worker_threads(){
+  // create thread pool of worker threads 
+  
+  pthread_t threads[w_threads_count]; // w_threads_count determined by # of sockets added to queue in main thread 
+
+  for(int i = 0; i<w_threads_count; ++i){
+
+    if(pthread_create(&threads[i], NULL, &worker_thread, NULL) != 0){
+      // each thread created will begin execution in worker_thread() func. 
+
+      fprintf(stderr, "%s", "Failed to create worker thread"); 
+      exit(1); 
+    }
+  }
+
+}
+
+void* worker_thread(){
+  puts("\nin worker_thread() function"); 
+  // job is to remove a socket des. from connection queue (consumer) 
+  // "read" a word passed through socket 
+  // use check_dictionary(char *word) to check spelling
+  // add result to log queue 
+  // loop, until client leaves, close socket 
+
+  char word[75]; // I don't think a word will be longer 
+  
+  int sd = remove_from_connection_queue();  // remove sd from queue 
+
+  size_t bytes_read = read(sd, word, 75); 
+
+  if(bytes_read == -1){
+    fprintf(stderr, "%s", "Failed to read word"); 
+  }
+
+  printf("word is: %s", word); 
+
+}
+
+
 
 void print_queue(){
   // TESTING 
