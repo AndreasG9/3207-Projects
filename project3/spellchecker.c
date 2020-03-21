@@ -33,6 +33,14 @@ pthread_cond_t safe_to_remove = PTHREAD_COND_INITIALIZER; // condition, wait unt
 //pthread_cond_init(safe_to_add); 
 int w_threads_count; 
 
+// producer-consumer, log queue 
+int q_count2; 
+int add_index2, remove_index2; 
+pthread_mutex_t lock2 = PTHREAD_MUTEX_INITIALIZER; 
+pthread_cond_t safe_to_add2 = PTHREAD_COND_INITIALIZER;  
+pthread_cond_t safe_to_remove2 = PTHREAD_COND_INITIALIZER;
+
+
 // main thread 
 void fill_dictionary_structure(); 
 int check_dictionary(char *word); 
@@ -291,24 +299,73 @@ void create_worker_threads(){
 }
 
 void* worker_thread(){
-  puts("\nin worker_thread() function"); 
   // job is to remove a socket des. from connection queue (consumer) 
   // "read" a word passed through socket 
   // use check_dictionary(char *word) to check spelling
   // add result to log queue 
   // loop, until client leaves, close socket 
+   puts("\nin worker_thread() function"); 
 
   char word[75]; // I don't think a word will be longer 
   
   int sd = remove_from_connection_queue();  // remove sd from queue 
 
-  size_t bytes_read = read(sd, word, 75); 
+
+  while(1){
+  ssize_t bytes_read = read(sd, word, 75); 
 
   if(bytes_read == -1){
     fprintf(stderr, "%s", "Failed to read word"); 
   }
 
-  printf("word is: %s", word); 
+  // remove extra space added, 
+  char del[] = " \n\t";  
+  char *check_word = strtok(word, del); 
+
+  //printf("Word to br written: %s\n", check_word); 
+
+
+  int res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+
+  char word_plus_status[100] = ""; // strcat, word + space + status 
+  strcat(word_plus_status, word); 
+  strcat(word_plus_status, " "); 
+
+  if(res == 0){
+    // found word, write "OK" to socket 
+
+    //puts("test: found"); 
+
+    strcat(word_plus_status, "OK"); 
+    printf("%s\n", word_plus_status); 
+
+    ssize_t bytes_written = write(sd, strcat, strlen(word_plus_status)); 
+
+    if(bytes_read == -1){
+      fprintf(stderr, "%s", "Failed to read word"); 
+    }
+  }
+
+  else{
+    // not found, write "MISPELLED" to socket 
+
+   // puts("test: no"); 
+
+    strcat(word_plus_status, "MISSPELLED"); 
+    printf("%s\n", word_plus_status); 
+
+    ssize_t bytes_written = write(sd, strcat, strlen(word_plus_status)); 
+
+    if(bytes_read == -1){
+      fprintf(stderr, "%s", "Failed to read word"); 
+    }
+  }
+
+  // add word_plus_status to log queue 
+
+
+  } // error, or client disconected 
+
 
 }
 
