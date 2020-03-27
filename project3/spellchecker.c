@@ -15,7 +15,7 @@ spellchecker.c - Network Spell Checker
 
 #define DEFAULT_DICTIONARY "dictionary.txt"
 #define DEFAULT_PORT 8888
-#define SIZE 10 // ??? whats a good size fix/ increase later 
+#define SIZE 50 // ??? whats a good size fix/ increase later 
 
 // network 
 int socket_desc;
@@ -56,88 +56,94 @@ int remove_from_connection_queue();
 void add_to_log_queue(char *result); 
 
 // log thread 
-void* log_thread();
+void* log_thread(void *arg);
 char* remove_from_log_queue(); 
 
-FILE *fptr2; 
+//FILE *fptr2; 
+FILE *fptr; 
 
 void print_queue(); // testing 
 
 int main (int argc, char *argv[]){
+
+  fptr = fopen("data.log", "w"); 
   // main thread 
   
-  if(argc == 1){
-    // no dictionary or port specified, use default values
+  // if(argc == 1){
+  //   // no dictionary or port specified, use default values
 
-    dictionary = DEFAULT_DICTIONARY;
-    port_number = DEFAULT_PORT; 
-  }
+  //   dictionary = DEFAULT_DICTIONARY;
+  //   port_number = DEFAULT_PORT; 
+  // }
 
-  else if (argc == 2){
-    // determine if the arg passed was a word (dictionary) or number (port)
+  // else if (argc == 2){
+  //   // determine if the arg passed was a word (dictionary) or number (port)
 
-    if((access(argv[1], F_OK) != -1)){
-      // your dictionary file exists, passed first arg 
-      dictionary = argv[1]; 
-      port_number = DEFAULT_PORT; 
-    }
-    else if(isdigit(*argv[1])){
-      // port number was passed in first arg 
-      port_number = atoi(argv[1]);
-      dictionary = DEFAULT_DICTIONARY; 
-    }
-    else{
-      // file not found, use defaults 
-      dictionary = DEFAULT_DICTIONARY;
-      port_number = DEFAULT_PORT; 
-    }
-  }
+  //   if((access(argv[1], F_OK) != -1)){
+  //     // your dictionary file exists, passed first arg 
+  //     dictionary = argv[1]; 
+  //     port_number = DEFAULT_PORT; 
+  //   }
+  //   else if(isdigit(*argv[1])){
+  //     // port number was passed in first arg 
+  //     port_number = atoi(argv[1]);
+  //     dictionary = DEFAULT_DICTIONARY; 
+  //   }
+  //   else{
+  //     // file not found, use defaults 
+  //     dictionary = DEFAULT_DICTIONARY;
+  //     port_number = DEFAULT_PORT; 
+  //   }
+  // }
 
-  else if(argc == 3){
-    // same implementation as previous, to determine which arg is a word ... bit more if else-ing 
-    if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
-      // your dictionary file exists, passed first arg and second arg is a num
-      dictionary = argv[1]; 
-      port_number = atoi(argv[2]); 
-    }
-    else if((access(argv[2], F_OK) != -1) && (isdigit(*argv[1]))){
-      // your dictionary file exists, passed second arg and first arg is a num 
-      dictionary = argv[2]; 
-      port_number = atoi(argv[1]); 
-    }
-    else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
-      // file doesn't exist, but port num could work 
-      port_number = atoi(argv[1]);
-      dictionary = DEFAULT_DICTIONARY; 
-    }
-    else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
-      // file doesn't exist, but port num could work 
-      port_number = atoi(argv[2]);
-      dictionary = DEFAULT_DICTIONARY; 
-    }
-    else{
-       // tested all instances, this is just a back-up 
-      dictionary = DEFAULT_DICTIONARY;
-      port_number = DEFAULT_PORT; 
-    }
-  }
+  // else if(argc == 3){
+  //   // same implementation as previous, to determine which arg is a word ... bit more if else-ing 
+  //   if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
+  //     // your dictionary file exists, passed first arg and second arg is a num
+  //     dictionary = argv[1]; 
+  //     port_number = atoi(argv[2]); 
+  //   }
+  //   else if((access(argv[2], F_OK) != -1) && (isdigit(*argv[1]))){
+  //     // your dictionary file exists, passed second arg and first arg is a num 
+  //     dictionary = argv[2]; 
+  //     port_number = atoi(argv[1]); 
+  //   }
+  //   else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
+  //     // file doesn't exist, but port num could work 
+  //     port_number = atoi(argv[1]);
+  //     dictionary = DEFAULT_DICTIONARY; 
+  //   }
+  //   else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
+  //     // file doesn't exist, but port num could work 
+  //     port_number = atoi(argv[2]);
+  //     dictionary = DEFAULT_DICTIONARY; 
+  //   }
+  //   else{
+  //      // tested all instances, this is just a back-up 
+  //     dictionary = DEFAULT_DICTIONARY;
+  //     port_number = DEFAULT_PORT; 
+  //   }
+  // }
   
-  else{
-    // to many args
+  // else{
+  //   // to many args
 
-    fprintf(stderr, "%s", "TOO MANY ARGS"); 
-    exit(1); 
-  }
+  //   fprintf(stderr, "%s", "TOO MANY ARGS"); 
+  //   exit(1); 
+  // }
 
-  printf("file: %s\n", dictionary);
-  printf("port num: %d\n", port_number); 
+  // printf("file: %s\n", dictionary);
+  // printf("port num: %d\n", port_number); 
+
+  dictionary = DEFAULT_DICTIONARY;
+  port_number = DEFAULT_PORT; 
 
   // INIT 
   q_count, add_index, remove_index = 0; 
   w_threads_count = 0; 
-  q_count2, add_index2, remove_index2 =0; 
+  q_count2, add_index2, remove_index2 = 0; 
 
-  fptr2 = fopen("data.log", "w"); 
+  //fptr2 = fopen("data.log", "w"); 
 
   char *word = malloc(sizeof(char*) * 1024); // FREE LATER FREE LATER (after close socket)
 
@@ -168,11 +174,11 @@ int main (int argc, char *argv[]){
 	  exit(1);
   }
 
-  //puts("Bind done.");
+  puts("Bind done.");
 
   // Listen (converts active socket to a LISTENING socket which can accept connections)
   listen(socket_desc, 3);
-  //puts("Waiting for incoming connections...");
+  puts("Waiting for incoming connections...");
   while (1){
     // MAIN LOOP 
 
@@ -192,10 +198,17 @@ int main (int argc, char *argv[]){
     ++w_threads_count; 
     create_worker_threads(); 
 
-    log_thread(); // spawn log thread, write results to data.log 
+    // spawn log thread 
+    pthread_t logger; 
+    int res = pthread_create(&logger, NULL, &log_thread, NULL); // log thread, write results to data.log (results from all clients)
 
-
+    if(res == -1){
+      fprintf(stderr, "%s", "Failed to create log thread"); 
+       
+    }
   }
+
+
 
   return 0; 
 }
@@ -253,7 +266,6 @@ void init_some_vars(){
   pthread_cond_init(&safe_to_remove, NULL); 
   pthread_cond_init(&safe_to_remove2, NULL); 
 }
-
 
 int check_dictionary(char *word){
   // sorted dictionary in dictionary.txt 
@@ -359,7 +371,6 @@ void* worker_thread(void* arg){
   // use check_dictionary(char *word) to check spelling
   // add result to log queue 
   // loop, until client leaves, close socket 
-  puts("\nin worker_thread() function"); 
 
   char word[75]; // I don't think a word will be longer 
 
@@ -374,7 +385,6 @@ void* worker_thread(void* arg){
     // if(bytes_read == -1){
     //   fprintf(stderr, "%s", "Failed to read word"); 
     // }
-
 
 
     // remove extra space/s / multiple words, ONLY CHECK FIRST WORD 
@@ -467,27 +477,27 @@ char* remove_from_log_queue(){
   return temp; 
 }
 
-void* log_thread(){
+void* log_thread(void *arg){
   // take string message (word + OK/MISSPELLED), write to log file 
+  // all clients connect, data is stored to a single log file 
 
-  fopen("data.log", "a+"); // MAIN 
+  fptr = fopen("data.log", "a+"); // MAIN 
 
-  while(1){
+ while(1){
 
-    char *append = remove_from_log_queue();
+    char *add = remove_from_log_queue();
 
-    printf("value to add log: %s\n", append); 
+    printf("value to add log: %s\n", add); 
  
     // add to log file 
     // close program with ctrl + c, wont lose data now 
-    fputs(append, fptr2); 
-    fflush(fptr2); 
-  }
+    fputs(add, fptr); 
+    fflush(fptr); 
+ }
 
-  fclose(fptr2); // close, after log a word, prevent loss of data 
+  fclose(fptr); // close, after log a word, prevent loss of data 
 
 }
-
 
 void print_queue(){
   // TESTING 
