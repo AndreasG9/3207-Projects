@@ -11,6 +11,7 @@ spellchecker.c - Network Spell Checker
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h> 
+#include <ctype.h> 
 
 #define DEFAULT_DICTIONARY "dictionary.txt"
 #define DEFAULT_PORT 8888
@@ -18,6 +19,7 @@ spellchecker.c - Network Spell Checker
 
 // network 
 int socket_desc;
+int port_number; 
 
 // dictionary 
 char *dictionary; // default is "dictionary.txt" 
@@ -59,52 +61,90 @@ char* remove_from_log_queue();
 
 FILE *fptr2; 
 
-
 void print_queue(); // testing 
 
 int main (int argc, char *argv[]){
   // main thread 
-
-  /*
+  
   if(argc == 1){
-    // no dicitonary or port specified, use default values
+    // no dictionary or port specified, use default values
+
     dictionary = DEFAULT_DICTIONARY;
-    port = 401; 
+    port_number = DEFAULT_PORT; 
   }
-  else if(argc > 3){
-    // too many args 
-    fprintf(stderr, "%s", "takes 0, 1, or 2 args"); 
+
+  else if (argc == 2){
+    // determine if the arg passed was a word (dictionary) or number (port)
+
+    if((access(argv[1], F_OK) != -1)){
+      // your dictionary file exists, passed first arg 
+      dictionary = argv[1]; 
+      port_number = DEFAULT_PORT; 
+    }
+    else if(isdigit(*argv[1])){
+      // port number was passed in first arg 
+      port_number = atoi(argv[1]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else{
+      // file not found, use defaults 
+      dictionary = DEFAULT_DICTIONARY;
+      port_number = DEFAULT_PORT; 
+    }
+  }
+
+  else if(argc == 3){
+    // same implementation as previous, to determine which arg is a word ... bit more if else-ing 
+    if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
+      // your dictionary file exists, passed first arg and second arg is a num
+      dictionary = argv[1]; 
+      port_number = atoi(argv[2]); 
+    }
+    else if((access(argv[2], F_OK) != -1) && (isdigit(*argv[1]))){
+      // your dictionary file exists, passed second arg and first arg is a num 
+      dictionary = argv[2]; 
+      port_number = atoi(argv[1]); 
+    }
+    else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
+      // file doesn't exist, but port num could work 
+      port_number = atoi(argv[1]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
+      // file doesn't exist, but port num could work 
+      port_number = atoi(argv[2]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else{
+       // tested all instances, this is just a back-up 
+      dictionary = DEFAULT_DICTIONARY;
+      port_number = DEFAULT_PORT; 
+    }
+  }
+  
+  else{
+    // to many args
+
+    fprintf(stderr, "%s", "TOO MANY ARGS"); 
     exit(1); 
   }
-  else if(argc == 2){
-    // isdigit to see if dictionary excluded, port number included 
 
-  }
-  */ 
+  printf("file: %s\n", dictionary);
+  printf("port num: %d\n", port_number); 
 
- // INIT 
-  int port_number;  
-
-  // use defaults for now
-  dictionary = NULL; 
-  dictionary = DEFAULT_DICTIONARY;
-  port_number = DEFAULT_PORT; 
-
-  q_count = 0, add_index = 0, remove_index = 0; 
+  // INIT 
+  q_count, add_index, remove_index = 0; 
   w_threads_count = 0; 
-  q_count2 = 0, add_index2 = 0, remove_index2 = 0; 
+  q_count2, add_index2, remove_index2 =0; 
 
   fptr2 = fopen("data.log", "w"); 
 
-
-  char *word = malloc(sizeof(char*) * 1024); 
+  char *word = malloc(sizeof(char*) * 1024); // FREE LATER FREE LATER (after close socket)
 
   fill_dictionary_structure(); // char **dictionary_stored_here, hold a string for each line in dictionary file  
-
   init_some_vars();   // init condition vars and mutexes/locks 
 
   // NETWORK setup (given code)
-
   int new_socket, c;
 
   struct sockaddr_in server, client;
@@ -151,7 +191,6 @@ int main (int argc, char *argv[]){
     // bulk of work done within these thread/s 
     ++w_threads_count; 
     create_worker_threads(); 
-
 
     log_thread(); // spawn log thread, write results to data.log 
 
@@ -214,6 +253,7 @@ void init_some_vars(){
   pthread_cond_init(&safe_to_remove, NULL); 
   pthread_cond_init(&safe_to_remove2, NULL); 
 }
+
 
 int check_dictionary(char *word){
   // sorted dictionary in dictionary.txt 
@@ -447,7 +487,6 @@ void* log_thread(){
   fclose(fptr2); // close, after log a word, prevent loss of data 
 
 }
-
 
 
 void print_queue(){
