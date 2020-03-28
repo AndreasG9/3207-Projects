@@ -185,7 +185,6 @@ int main (int argc, char *argv[]){
   puts("Waiting for incoming connections...");
 
  
-
   while (1){
     // MAIN LOOP 
 
@@ -278,6 +277,7 @@ int check_dictionary(char *word){
 
     if(target == 0){
       // found string, return index or TRUE / 0  
+
       return 0; // TRUE 
     }
 
@@ -349,7 +349,6 @@ void create_threads(){
   // create thread pool of worker threads, who will "live inside" the worker_thread function 
   // in addition to single log thread, who will "live inside" the log_thread function 
 
-  
   pthread_t w_threads[NUM_WORKERS]; // w_threads_count determined by constant NUM_WORKERS (set it to 50)
 
   for(int i = 0; i<NUM_WORKERS; ++i){
@@ -380,23 +379,24 @@ void* worker_thread(void* arg){
   // add result to log queue 
   // loop, until client leaves, close socket 
 
-  char word[75]; // I don't think a word will be longer 
+  char word[30]; // I don't think a word will be longer 
   int res; 
-  char del[] = " \n\t"; 
+  char del[] = " \n\t\r"; // possible trailing characters, now works when test with nc AND telnet ('\r')
   char *check_word = NULL; 
 
   while(1){
-    int sd = remove_from_connection_queue(); // remove sd from queue 
+    int sd = remove_from_connection_queue(); // remove sd from queue  
 
-    while(read(sd, word, 75) > 0){
+    while(read(sd, word, 30) > 0){
     // loop until read/write fails / client disconnects 
 
       // remove extra space/s / multiple words, ONLY CHECK FIRST WORD   
       check_word = strtok(word, del); 
-
+      
       //printf("Word to br written: %s\n", check_word); 
 
       res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+       
       char word_plus_status[100] = ""; // strcat, word + space + status 
       strcat(word_plus_status, word); 
       strcat(word_plus_status, " "); 
@@ -427,7 +427,8 @@ void* worker_thread(void* arg){
 
     } // error / client disconected 
 
-    close(sd); // close socket
+    
+    close(socket_desc); // close socket
 
   }
 }
