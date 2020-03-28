@@ -16,6 +16,7 @@ spellchecker.c - Network Spell Checker
 #define DEFAULT_DICTIONARY "dictionary.txt"
 #define DEFAULT_PORT 8888
 #define SIZE 50 // ??? whats a good size fix/ increase later 
+#define NUM_WORKERS 25
 
 // network 
 int socket_desc;
@@ -30,7 +31,7 @@ int dictionary_count; // too allocate enough memory for double ptr (each string 
 int buffer_connection_Q[SIZE]; 
 int q_count; 
 int add_index, remove_index; 
-int w_threads_count; 
+int thread_current; 
 pthread_mutex_t lock; 
 pthread_cond_t safe_to_add; // condition, wait until space available to add to queue 
 pthread_cond_t safe_to_remove; // condition, wait until you can remove data from queue 
@@ -48,7 +49,7 @@ void fill_dictionary_structure();
 void init_some_vars(); 
 int check_dictionary(char *word); 
 void add_to_connection_queue(int socket); 
-void create_worker_threads(); 
+void create_threads(); 
 
 // worker threads 
 void* worker_thread(void* arg); 
@@ -56,92 +57,90 @@ int remove_from_connection_queue();
 void add_to_log_queue(char *result); 
 
 // log thread 
+FILE *fptr; 
 void* log_thread(void *arg);
 char* remove_from_log_queue(); 
 
-//FILE *fptr2; 
-FILE *fptr; 
 
-void print_queue(); // testing 
 
 int main (int argc, char *argv[]){
 
   fptr = fopen("data.log", "w"); 
   // main thread 
   
-  // if(argc == 1){
-  //   // no dictionary or port specified, use default values
+  if(argc == 1){
+    // no dictionary or port specified, use default values
 
-  //   dictionary = DEFAULT_DICTIONARY;
-  //   port_number = DEFAULT_PORT; 
-  // }
+    dictionary = DEFAULT_DICTIONARY;
+    port_number = DEFAULT_PORT; 
+  }
 
-  // else if (argc == 2){
-  //   // determine if the arg passed was a word (dictionary) or number (port)
+  else if (argc == 2){
+    // determine if the arg passed was a word (dictionary) or number (port)
 
-  //   if((access(argv[1], F_OK) != -1)){
-  //     // your dictionary file exists, passed first arg 
-  //     dictionary = argv[1]; 
-  //     port_number = DEFAULT_PORT; 
-  //   }
-  //   else if(isdigit(*argv[1])){
-  //     // port number was passed in first arg 
-  //     port_number = atoi(argv[1]);
-  //     dictionary = DEFAULT_DICTIONARY; 
-  //   }
-  //   else{
-  //     // file not found, use defaults 
-  //     dictionary = DEFAULT_DICTIONARY;
-  //     port_number = DEFAULT_PORT; 
-  //   }
-  // }
+    if((access(argv[1], F_OK) != -1)){
+      // your dictionary file exists, passed first arg 
+      dictionary = argv[1]; 
+      port_number = DEFAULT_PORT; 
+    }
+    else if(isdigit(*argv[1])){
+      // port number was passed in first arg 
+      port_number = atoi(argv[1]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else{
+      // file not found, use defaults 
+      dictionary = DEFAULT_DICTIONARY;
+      port_number = DEFAULT_PORT; 
+    }
+  }
 
-  // else if(argc == 3){
-  //   // same implementation as previous, to determine which arg is a word ... bit more if else-ing 
-  //   if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
-  //     // your dictionary file exists, passed first arg and second arg is a num
-  //     dictionary = argv[1]; 
-  //     port_number = atoi(argv[2]); 
-  //   }
-  //   else if((access(argv[2], F_OK) != -1) && (isdigit(*argv[1]))){
-  //     // your dictionary file exists, passed second arg and first arg is a num 
-  //     dictionary = argv[2]; 
-  //     port_number = atoi(argv[1]); 
-  //   }
-  //   else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
-  //     // file doesn't exist, but port num could work 
-  //     port_number = atoi(argv[1]);
-  //     dictionary = DEFAULT_DICTIONARY; 
-  //   }
-  //   else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
-  //     // file doesn't exist, but port num could work 
-  //     port_number = atoi(argv[2]);
-  //     dictionary = DEFAULT_DICTIONARY; 
-  //   }
-  //   else{
-  //      // tested all instances, this is just a back-up 
-  //     dictionary = DEFAULT_DICTIONARY;
-  //     port_number = DEFAULT_PORT; 
-  //   }
-  // }
+  else if(argc == 3){
+    // same implementation as previous, to determine which arg is a word ... bit more if else-ing 
+    if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
+      // your dictionary file exists, passed first arg and second arg is a num
+      dictionary = argv[1]; 
+      port_number = atoi(argv[2]); 
+    }
+    else if((access(argv[2], F_OK) != -1) && (isdigit(*argv[1]))){
+      // your dictionary file exists, passed second arg and first arg is a num 
+      dictionary = argv[2]; 
+      port_number = atoi(argv[1]); 
+    }
+    else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
+      // file doesn't exist, but port num could work 
+      port_number = atoi(argv[1]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
+      // file doesn't exist, but port num could work 
+      port_number = atoi(argv[2]);
+      dictionary = DEFAULT_DICTIONARY; 
+    }
+    else{
+       // tested all instances, this is just a back-up 
+      dictionary = DEFAULT_DICTIONARY;
+      port_number = DEFAULT_PORT; 
+    }
+  }
   
-  // else{
-  //   // to many args
-
-  //   fprintf(stderr, "%s", "TOO MANY ARGS"); 
-  //   exit(1); 
-  // }
+  else{
+    // to many args
+    fprintf(stderr, "%s", "TOO MANY ARGS"); 
+    exit(1); 
+  }
 
   // printf("file: %s\n", dictionary);
   // printf("port num: %d\n", port_number); 
 
+  // TESTING 
   dictionary = DEFAULT_DICTIONARY;
   port_number = DEFAULT_PORT; 
 
   // INIT 
   q_count, add_index, remove_index = 0; 
-  w_threads_count = 0; 
   q_count2, add_index2, remove_index2 = 0; 
+  thread_current = 0; 
 
   //fptr2 = fopen("data.log", "w"); 
 
@@ -149,6 +148,11 @@ int main (int argc, char *argv[]){
 
   fill_dictionary_structure(); // char **dictionary_stored_here, hold a string for each line in dictionary file  
   init_some_vars();   // init condition vars and mutexes/locks 
+
+
+  // spawn worker threads (and log thread) who remove data from queue (consumer), will write to socket and log the word + OK/MISSPELLED
+  // bulk of work done within these thread/s 
+  create_threads(); 
 
   // NETWORK setup (given code)
   int new_socket, c;
@@ -179,6 +183,9 @@ int main (int argc, char *argv[]){
   // Listen (converts active socket to a LISTENING socket which can accept connections)
   listen(socket_desc, 3);
   puts("Waiting for incoming connections...");
+
+ 
+
   while (1){
     // MAIN LOOP 
 
@@ -189,26 +196,13 @@ int main (int argc, char *argv[]){
 	    fprintf(stderr, "%s","Error: Accept failed");
 	    continue;
 	  }
-	  fprintf(stdout, "%s","Connection accepted");
+    //fprintf(stdout, "%s","Connection accepted");
+    fprintf(stdout, "%s%d%s%d\n", "Thread ", thread_current+1, " grabbed socket: ", new_socket); 
 
-    add_to_connection_queue(new_socket); // add the socket des. to the buffer 
-
-    // spawn worker threads who remove data from queue (consumer), will write to socket the word + OK/MISSPELLED
-    // bulk of work done within these thread/s 
-    ++w_threads_count; 
-    create_worker_threads(); 
-
-    // spawn log thread 
-    pthread_t logger; 
-    int res = pthread_create(&logger, NULL, &log_thread, NULL); // log thread, write results to data.log (results from all clients)
-
-    if(res == -1){
-      fprintf(stderr, "%s", "Failed to create log thread"); 
-       
-    }
+    add_to_connection_queue(new_socket); // add new socket to the q, which signals the worker threads 
+    ++thread_current; 
+    //printf("CURRENT WORKER THREAD COUNT : %d\n", w_threads_count); 
   }
-
-
 
   return 0; 
 }
@@ -323,6 +317,10 @@ void add_to_connection_queue(int socket){
 
   pthread_cond_signal(&safe_to_remove); // wake the consumer, safe to remove data from queue now 
   pthread_mutex_unlock(&lock); 
+
+  // ++w_threads_count; 
+  // create_threads(); 
+  // printf("CURRENT WORKER THREAD COUNT : %d\n", w_threads_count); 
 }
 
 int remove_from_connection_queue(){
@@ -340,7 +338,6 @@ int remove_from_connection_queue(){
   remove_index = (remove_index + 1) % SIZE; 
   --q_count; 
 
-  //
 
   pthread_cond_signal(&safe_to_add); // wake up producer, safe to add data 
   pthread_mutex_unlock(&lock); 
@@ -348,19 +345,30 @@ int remove_from_connection_queue(){
   return temp; 
 }
 
-void create_worker_threads(){
-  // create thread pool of worker threads 
+void create_threads(){
+  // create thread pool of worker threads, who will "live inside" the worker_thread function 
+  // in addition to single log thread, who will "live inside" the log_thread function 
+
   
-  pthread_t threads[w_threads_count]; // w_threads_count determined by # of sockets added to queue in main thread 
+  pthread_t w_threads[NUM_WORKERS]; // w_threads_count determined by constant NUM_WORKERS (set it to 50)
 
-  for(int i = 0; i<w_threads_count; ++i){
+  for(int i = 0; i<NUM_WORKERS; ++i){
 
-    if(pthread_create(&threads[i], NULL, &worker_thread, NULL) != 0){
+    if(pthread_create(&w_threads[i], NULL, &worker_thread, NULL) != 0){
       // each thread created will begin execution in worker_thread() func. 
 
       fprintf(stderr, "%s", "Failed to create worker thread"); 
       exit(1); 
     }
+  }
+
+  // spawn log thread 
+  pthread_t logger; 
+  int res = pthread_create(&logger, NULL, &log_thread, NULL); // log thread, write results to data.log (results from all clients)
+
+  if(res == -1){
+    fprintf(stderr, "%s", "Failed to create log thread"); 
+    exit(1); 
   }
 
 }
@@ -373,61 +381,55 @@ void* worker_thread(void* arg){
   // loop, until client leaves, close socket 
 
   char word[75]; // I don't think a word will be longer 
+  int res; 
+  char del[] = " \n\t"; 
+  char *check_word = NULL; 
 
-  int sd = remove_from_connection_queue(); // remove sd from queue 
+  while(1){
+    int sd = remove_from_connection_queue(); // remove sd from queue 
 
-  while(read(sd, word, 75) > 0){
+    while(read(sd, word, 75) > 0){
     // loop until read/write fails / client disconnects 
 
-    //ssize_t bytes_read = read(sd, word, 75); 
+      // remove extra space/s / multiple words, ONLY CHECK FIRST WORD   
+      check_word = strtok(word, del); 
 
+      //printf("Word to br written: %s\n", check_word); 
 
-    // if(bytes_read == -1){
-    //   fprintf(stderr, "%s", "Failed to read word"); 
-    // }
+      res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+      char word_plus_status[100] = ""; // strcat, word + space + status 
+      strcat(word_plus_status, word); 
+      strcat(word_plus_status, " "); 
 
+      if(res == 0){
+        // found word, write "word + OK" to socket 
 
-    // remove extra space/s / multiple words, ONLY CHECK FIRST WORD 
-    char del[] = " \n\t";  
-    char *check_word = strtok(word, del); 
+        strcat(word_plus_status, "OK"); 
+        strcat(word_plus_status, "\n"); 
+      }
 
-    //printf("Word to br written: %s\n", check_word); 
+      else{
+        // not found, write "word + MISSPELLED" to socket 
 
-    int res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+        strcat(word_plus_status, "MISSPELLED");  
+        strcat(word_plus_status, "\n"); 
+      }
 
-    char word_plus_status[100] = ""; // strcat, word + space + status 
-    strcat(word_plus_status, word); 
-    strcat(word_plus_status, " "); 
+      printf("Value to be written: %s\n", word_plus_status); 
+      ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); 
 
-    if(res == 0){
-      // found word, write "word + OK" to socket 
+      if(bytes_written == -1){
+        fprintf(stderr, "%s", "Failed to write word"); 
+        break; 
+      }
 
-      strcat(word_plus_status, "OK"); 
-      strcat(word_plus_status, "\n"); 
-   }
+      add_to_log_queue(word_plus_status);  // add word_plus_status to log queue 
 
-    else{
-      // not found, write "word + MISSPELLED" to socket 
+    } // error / client disconected 
 
-      strcat(word_plus_status, "MISSPELLED");  
-      strcat(word_plus_status, "\n"); 
-   }
+    close(sd); // close socket
 
-
-    printf("Value to be written: %s\n", word_plus_status); 
-
-    ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); 
-
-    if(bytes_written == -1){
-      fprintf(stderr, "%s", "Failed to write word"); 
-      break; 
-    }
-
-    add_to_log_queue(word_plus_status);  // add word_plus_status to log queue 
-
-  } // error / client disconected 
-
-  close(sd); // close socket
+  }
 }
 
 void add_to_log_queue(char *result){
@@ -483,11 +485,11 @@ void* log_thread(void *arg){
 
   fptr = fopen("data.log", "a+"); // MAIN 
 
- while(1){
+  while(1){
 
     char *add = remove_from_log_queue();
 
-    printf("value to add log: %s\n", add); 
+    //printf("value to add log: %s\n", add); 
  
     // add to log file 
     // close program with ctrl + c, wont lose data now 
@@ -498,16 +500,3 @@ void* log_thread(void *arg){
   fclose(fptr); // close, after log a word, prevent loss of data 
 
 }
-
-void print_queue(){
-  // TESTING 
-
-  for(int i = 0; i<SIZE; ++i)
-    printf("%d", buffer_connection_Q[i]); 
-
-}
-
-
-
- 
-
