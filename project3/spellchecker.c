@@ -12,11 +12,12 @@ spellchecker.c - Network Spell Checker
 #include <arpa/inet.h>
 #include <pthread.h> 
 #include <ctype.h> 
+#include <signal.h>
 
 #define DEFAULT_DICTIONARY "dictionary.txt"
 #define DEFAULT_PORT 8888
-#define SIZE 50 // ??? whats a good size fix/ increase later 
-#define NUM_WORKERS 25
+#define SIZE 50 // MAX QUEUE SIZE 
+#define NUM_WORKERS 50 // support up to 50 w_threads 
 
 // network 
 int socket_desc;
@@ -29,18 +30,18 @@ int dictionary_count; // too allocate enough memory for double ptr (each string 
 
 // producer-consumer, connection queue 
 int buffer_connection_Q[SIZE]; 
-int q_count; 
+int connection_q_count; 
 int add_index, remove_index; 
 int thread_current; 
-pthread_mutex_t lock; 
+pthread_mutex_t connection_q_lock; 
 pthread_cond_t safe_to_add; // condition, wait until space available to add to queue 
 pthread_cond_t safe_to_remove; // condition, wait until you can remove data from queue 
 
 // producer-consumer, log queue 
 char *buffer_log_Q[SIZE]; 
-int q_count2; 
+int log_q_count; 
 int add_index2, remove_index2; 
-pthread_mutex_t lock2;
+pthread_mutex_t log_q_lock;
 pthread_cond_t safe_to_add2;  
 pthread_cond_t safe_to_remove2; 
 
@@ -50,23 +51,26 @@ void init_some_vars();
 int check_dictionary(char *word); 
 void add_to_connection_queue(int socket); 
 void create_threads(); 
+void clean_up(void); 
 
 // worker threads 
-void* worker_thread(void* arg); 
+void* worker_thread(void* id); 
 int remove_from_connection_queue(); 
 void add_to_log_queue(char *result); 
+pthread_attr_t detach;
+int pthread_detach(pthread_t thread); 
 
 // log thread 
 FILE *fptr; 
 void* log_thread(void *arg);
 char* remove_from_log_queue(); 
 
+// properly free heap allocated structures when program killed  
+void sigint_handler(int sig_num); 
 
 
 int main (int argc, char *argv[]){
-
-  fptr = fopen("data.log", "w"); 
-  // main thread 
+  // "main thread"  
   
   if(argc == 1){
     // no dictionary or port specified, use default values
@@ -107,18 +111,25 @@ int main (int argc, char *argv[]){
       dictionary = argv[2]; 
       port_number = atoi(argv[1]); 
     }
-    else if((access(argv[2], F_OK) == -1) && (isdigit(*argv[1]))){
-      // file doesn't exist, but port num could work 
-      port_number = atoi(argv[1]);
-      dictionary = DEFAULT_DICTIONARY; 
+    if((access(argv[1], F_OK) != -1) && (isdigit(*argv[2]))){
+      // your dictionary file exists, passed first arg and second arg is a num
+      dictionary = argv[1]; 
+      port_number = atoi(argv[2]); 
+    }
+    else if((access(argv[1], F_OK) != -1) && (!(isdigit(*argv[1])))){
+      // your dictionary file exists, passed second arg which is NOT a number
+      // instance where both args are files 
+      dictionary = argv[1]; 
+      port_number = DEFAULT_PORT; 
     }
     else if((access(argv[1], F_OK) == -1) && (isdigit(*argv[2]))){
       // file doesn't exist, but port num could work 
       port_number = atoi(argv[2]);
       dictionary = DEFAULT_DICTIONARY; 
     }
+  
     else{
-       // tested all instances, this is just a back-up 
+       // tested all instances (I think), this is just a back-up 
       dictionary = DEFAULT_DICTIONARY;
       port_number = DEFAULT_PORT; 
     }
@@ -126,33 +137,26 @@ int main (int argc, char *argv[]){
   
   else{
     // to many args
-    fprintf(stderr, "%s", "TOO MANY ARGS"); 
+    fprintf(stderr, "%s", "TOO MANY ARGS\n"); 
     exit(1); 
   }
 
-  // printf("file: %s\n", dictionary);
-  // printf("port num: %d\n", port_number); 
-
-  // TESTING 
-  dictionary = DEFAULT_DICTIONARY;
-  port_number = DEFAULT_PORT; 
+   printf("file: %s\n", dictionary);
+   printf("port num: %d\n", port_number); 
 
   // INIT 
-  q_count, add_index, remove_index = 0; 
-  q_count2, add_index2, remove_index2 = 0; 
-  thread_current = 0; 
-
-  //fptr2 = fopen("data.log", "w"); 
-
-  char *word = malloc(sizeof(char*) * 1024); // FREE LATER FREE LATER (after close socket)
+  connection_q_count, add_index, remove_index = 0; 
+  log_q_count, add_index2, remove_index2 = 0; 
+  thread_current = 0;  
 
   fill_dictionary_structure(); // char **dictionary_stored_here, hold a string for each line in dictionary file  
   init_some_vars();   // init condition vars and mutexes/locks 
-
+  signal(SIGINT, sigint_handler); 
 
   // spawn worker threads (and log thread) who remove data from queue (consumer), will write to socket and log the word + OK/MISSPELLED
   // bulk of work done within these thread/s 
   create_threads(); 
+  
 
   // NETWORK setup (given code)
   int new_socket, c;
@@ -183,7 +187,6 @@ int main (int argc, char *argv[]){
   // Listen (converts active socket to a LISTENING socket which can accept connections)
   listen(socket_desc, 3);
   puts("Waiting for incoming connections...");
-
  
   while (1){
     // MAIN LOOP 
@@ -198,11 +201,11 @@ int main (int argc, char *argv[]){
     //fprintf(stdout, "%s","Connection accepted");
     fprintf(stdout, "%s%d%s%d\n", "Thread ", thread_current+1, " grabbed socket: ", new_socket); 
 
-    add_to_connection_queue(new_socket); // add new socket to the q, which signals the worker threads 
-    ++thread_current; 
-    //printf("CURRENT WORKER THREAD COUNT : %d\n", w_threads_count); 
-  }
+    add_to_connection_queue(new_socket); // add new socket to the q, which signals the worker threads, ... chain reaction 
+    ++thread_current; // coordinate to w_id arg passed to w_thread 
 
+  }
+   
   return 0; 
 }
 
@@ -224,7 +227,8 @@ void fill_dictionary_structure(){
 
 
   // allocate memory for n amount of string entries, each ref by ptr, reset file ptr 
-  dictionary_stored_here = malloc(sizeof(char*) * dictionary_count); 
+  //dictionary_stored_here = (char **)malloc(sizeof(char*) * dictionary_count); 
+  dictionary_stored_here = (char **)malloc((dictionary_count+1) * sizeof(*dictionary_stored_here)); 
   rewind(fptr);
   int i = 0, j = 0; 
 
@@ -232,37 +236,49 @@ void fill_dictionary_structure(){
   size_t len = 0; 
   ssize_t read = -1; 
   char del[] = " \n\t";  
+  char *token = NULL; 
 
   while(read = getline(&line, &len, fptr) != -1){
     // fill the array 
 
-    char *token = strtok(line, del); // solve issue, extra space being added 
+    token = strtok(line, del); // solve issue, extra space being added 
 
     dictionary_stored_here[i] = token;
     ++i; 
     line = NULL; // reset 
-
+    token = NULL; 
   }
 
   dictionary_stored_here[i] = NULL;  
-
+  free(line); 
+  free(token);
   fclose(fptr); 
 }
 
 void init_some_vars(){
   // initilizate condition vars and mutexes 
 
-  pthread_mutex_init(&lock, NULL);
-  pthread_mutex_init(&lock2, NULL);
-  pthread_cond_init(&safe_to_add, NULL); 
-  pthread_cond_init(&safe_to_add2, NULL);
-  pthread_cond_init(&safe_to_remove, NULL); 
-  pthread_cond_init(&safe_to_remove2, NULL); 
+  int res = pthread_mutex_init(&connection_q_lock, NULL);
+  int res2 = pthread_mutex_init(&log_q_lock, NULL);
+  int res3 = pthread_cond_init(&safe_to_add, NULL); 
+  int res4 = pthread_cond_init(&safe_to_add2, NULL);
+  int res5 = pthread_cond_init(&safe_to_remove, NULL); 
+  int res6 = pthread_cond_init(&safe_to_remove2, NULL); 
+  int res7 = pthread_attr_init(&detach);
+  int res8 = pthread_attr_setdetachstate(&detach, PTHREAD_CREATE_DETACHED);
+
+  if(res == -1 || res2 == -1 || res3 == -1 || res4 == -1 || res5 == -1 || res6 == -1 || res7 == -1 || res8 == -1){
+    fprintf(stdout, "%s", "Error in init. of pthread locks and C.V.s, or pthread attribute");
+    exit(1);
+  } 
 }
 
 int check_dictionary(char *word){
   // sorted dictionary in dictionary.txt 
   // implement binary search to find a specific word
+
+  char del[] = " \n\t\r"; // possible trailing characters, now works when test with nc AND telnet ('\r')
+  word = strtok(word, del); // remove extra space/s / multiple words, ONLY CHECK FIRST WORD  
 
   //init indexes 
   int left, middle, right, target; 
@@ -299,48 +315,49 @@ int check_dictionary(char *word){
 void add_to_connection_queue(int socket){
   // char buffer_connection_Q[SIZE]
 
-  pthread_mutex_lock(&lock); // get lock 
+  if(pthread_mutex_lock(&connection_q_lock) != 0){ // get lock
+     fprintf(stdout, "%s", "failed to acquire lock");
+     exit(1); 
+  }  
 
-  while(q_count == SIZE){
+  while(connection_q_count == SIZE){
     // while queue is full, release lock and wait, for condition (can add to queue) to be satisfied. 
-    pthread_cond_wait(&safe_to_add, &lock); 
+    pthread_cond_wait(&safe_to_add, &connection_q_lock); 
   }
 
   // at this point, lock was re-aquired, safe to add to queue  
   buffer_connection_Q[add_index] = socket; // socket to add 
 
-  //++add_index; 
   add_index = (add_index + 1) % SIZE; 
-  ++q_count; 
-
-  // if add_index count == SIZE/ MAX, reset to 0, signal consumer as Queue is filled 
+  ++connection_q_count; 
 
   pthread_cond_signal(&safe_to_remove); // wake the consumer, safe to remove data from queue now 
-  pthread_mutex_unlock(&lock); 
 
-  // ++w_threads_count; 
-  // create_threads(); 
-  // printf("CURRENT WORKER THREAD COUNT : %d\n", w_threads_count); 
+   // release lock, for consumer to re-aquire 
+  if(pthread_mutex_unlock(&connection_q_lock) != 0){
+    fprintf(stdout, "%s", "failed to release lock");
+    exit(1); 
+  }
 }
 
 int remove_from_connection_queue(){
   // consumer 
 
-  pthread_mutex_lock(&lock); // get lock 
+  pthread_mutex_lock(&connection_q_lock); // get lock 
 
-  while(q_count == 0){
+  while(connection_q_count == 0){
     // while queue is empty, release lock and wait, for condiition (can remove data from queue)
-    pthread_cond_wait(&safe_to_remove, &lock); 
+    pthread_cond_wait(&safe_to_remove, &connection_q_lock); 
   }
 
   // safe to remove data from queue 
   int temp = buffer_connection_Q[remove_index]; 
   remove_index = (remove_index + 1) % SIZE; 
-  --q_count; 
+  --connection_q_count; 
 
 
   pthread_cond_signal(&safe_to_add); // wake up producer, safe to add data 
-  pthread_mutex_unlock(&lock); 
+  pthread_mutex_unlock(&connection_q_lock); 
 
   return temp; 
 }
@@ -351,14 +368,19 @@ void create_threads(){
 
   pthread_t w_threads[NUM_WORKERS]; // w_threads_count determined by constant NUM_WORKERS (set it to 50)
 
+  long int id = 0; // w_thread id  
+
   for(int i = 0; i<NUM_WORKERS; ++i){
 
-    if(pthread_create(&w_threads[i], NULL, &worker_thread, NULL) != 0){
+    ++id; 
+
+    if(pthread_create(&w_threads[i], &detach, &worker_thread, (void*)id) != 0){
       // each thread created will begin execution in worker_thread() func. 
 
-      fprintf(stderr, "%s", "Failed to create worker thread"); 
+      fprintf(stderr, "%s\n", "Failed to create worker thread"); 
       exit(1); 
     }
+
   }
 
   // spawn log thread 
@@ -366,13 +388,13 @@ void create_threads(){
   int res = pthread_create(&logger, NULL, &log_thread, NULL); // log thread, write results to data.log (results from all clients)
 
   if(res == -1){
-    fprintf(stderr, "%s", "Failed to create log thread"); 
+    fprintf(stderr, "%s\n", "Failed to create log thread"); 
     exit(1); 
   }
 
 }
 
-void* worker_thread(void* arg){
+void* worker_thread(void* id){
   // job is to remove a socket des. from connection queue (consumer) 
   // "read" a word passed through socket 
   // use check_dictionary(char *word) to check spelling
@@ -381,21 +403,16 @@ void* worker_thread(void* arg){
 
   char word[30]; // I don't think a word will be longer 
   int res; 
-  char del[] = " \n\t\r"; // possible trailing characters, now works when test with nc AND telnet ('\r')
-  char *check_word = NULL; 
+  char *welcome = "Welcome to Network Spell Checker ...\n"; 
 
   while(1){
-    int sd = remove_from_connection_queue(); // remove sd from queue  
+    int sd = remove_from_connection_queue(); // remove sd from queue   
+    write(sd, welcome, strlen(welcome));
 
     while(read(sd, word, 30) > 0){
     // loop until read/write fails / client disconnects 
 
-      // remove extra space/s / multiple words, ONLY CHECK FIRST WORD   
-      check_word = strtok(word, del); 
-      
-      //printf("Word to br written: %s\n", check_word); 
-
-      res = check_dictionary(check_word);  // used binary search, on already sorted dictionary structure 
+      res = check_dictionary(word);  // use binary search, on already sorted dictionary structure 
        
       char word_plus_status[100] = ""; // strcat, word + space + status 
       strcat(word_plus_status, word); 
@@ -416,7 +433,7 @@ void* worker_thread(void* arg){
       }
 
       printf("Value to be written: %s\n", word_plus_status); 
-      ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); 
+      ssize_t bytes_written = write(sd, word_plus_status, strlen(word_plus_status)); // communicate response back to client 
 
       if(bytes_written == -1){
         fprintf(stderr, "%s", "Failed to write word"); 
@@ -424,80 +441,123 @@ void* worker_thread(void* arg){
       }
 
       add_to_log_queue(word_plus_status);  // add word_plus_status to log queue 
-
+     
     } // error / client disconected 
-
     
-    close(socket_desc); // close socket
+    long w_thread_id = (long int) id; // arg passed from pthread create func. 
+    fprintf(stdout, "%s%ld%s%d\n", "Thread ", w_thread_id, " closed socket: ", sd);
 
+    // Note: don't want to kill thread, new clients can use this thread now ... 
+
+    close(sd); // close socket   
   }
 }
 
 void add_to_log_queue(char *result){
   // worker thread (producer)
   // same implementation as add_to_connection_queue(int socket) ... 
-  // char *buffer_log_Q[SIZE]; 
+  // char *buffer_log_Q[SIZE];  
 
-  pthread_mutex_lock(&lock2); // get lock 
+  if(pthread_mutex_lock(&log_q_lock) != 0){ // get lock
+    fprintf(stdout, "%s", "failed to acquire lock");
+    exit(1); 
+  }  
 
-  while(q_count2 == SIZE){
+  while(log_q_count == SIZE){
     // while queue is full, relase lock and wait, for condition (can add to queue) to be satisfied. 
-    pthread_cond_wait(&safe_to_add2, &lock2); 
+    pthread_cond_wait(&safe_to_add2, &log_q_lock); 
   }
 
-  // at this point, lock was re-aquired, safe to add to queue  
-  buffer_log_Q[add_index2] = result; // result (WORD + OK/MISSPELLED) to add  
+  ++log_q_count; 
 
-  add_index2 = (add_index2 + 1) % SIZE; 
-  ++q_count2; 
+  // at this point, lock was re-aquired, safe to add to queue   
+  buffer_log_Q[add_index2] = result; // result (WORD + OK/MISSPELLED) to add   
 
-  // if add_index count == SIZE/ MAX, reset to 0, signal consumer as Queue is filled 
+  //printf("add to logQ: %s at index: %d\n", buffer_log_Q[add_index2], add_index2);
 
+  add_index2 = (add_index2 + 1) % SIZE; // circular buffer, when "come full circle", start at 0 again 
+ 
   pthread_cond_signal(&safe_to_remove2); // wake the consumer, safe to remove data from queue now 
-  pthread_mutex_unlock(&lock2);
+
+  // release lock, for consumer to re-aquire 
+  if(pthread_mutex_unlock(&log_q_lock) != 0){
+    fprintf(stdout, "%s", "failed to release lock");
+    exit(1); 
+  }
 
 }
 
 char* remove_from_log_queue(){
   // log thread (consumer)
-  // same implementation ass remove_from_connection_queue() ... 
+  // same implementation as remove_from_connection_queue() ... 
 
-  pthread_mutex_lock(&lock2); // get lock 
+   if(pthread_mutex_lock(&log_q_lock) != 0){ // get lock
+    fprintf(stdout, "%s", "failed to acquire lock");
+    exit(1); 
+  } 
 
-  while(q_count2 == 0){
+  while(log_q_count == 0){
     // while queue is empty, release lock and wait, for condiition (can remove data from queue)
-    pthread_cond_wait(&safe_to_remove2, &lock2); 
+    pthread_cond_wait(&safe_to_remove2, &log_q_lock); 
   }
+
+  --log_q_count;  
 
   // safe to remove data from queue 
   char *temp = buffer_log_Q[remove_index2]; 
-  remove_index2 = (remove_index2 + 1) % SIZE; 
-  --q_count2; 
 
+  //printf("removed from logQ: %s at index %d\n", temp, remove_index2);
+
+  remove_index2 = (remove_index2 + 1) % SIZE; 
+  
   pthread_cond_signal(&safe_to_add2); // wake up producer, safe to add data 
-  pthread_mutex_unlock(&lock2); 
+
+  if(pthread_mutex_unlock(&log_q_lock) != 0){ // release lock 
+    fprintf(stdout, "%s", "failed to release lock");
+    exit(1); 
+  }
   
   return temp; 
 }
 
 void* log_thread(void *arg){
   // take string message (word + OK/MISSPELLED), write to log file 
-  // all clients connect, data is stored to a single log file 
+  // all clients connect, data is stored to a single log file --> "data.log"
 
-  fptr = fopen("data.log", "a+"); // MAIN 
+  fptr = fopen("data.log", "w"); 
+
+  char *add = NULL; 
 
   while(1){
+    // if log_q is empty, will wait on a condition ...
+    // non-empty, removes the "first" ( circular buffer, first is the current index remove_index2) string from the buffer 
+    // add to the log file, fflushing the buffer/stream to ensure no data loss. 
 
-    char *add = remove_from_log_queue();
-
-    //printf("value to add log: %s\n", add); 
- 
-    // add to log file 
-    // close program with ctrl + c, wont lose data now 
-    fputs(add, fptr); 
+    add = remove_from_log_queue();
+    fprintf(fptr, "%s", add);
     fflush(fptr); 
  }
 
-  fclose(fptr); // close, after log a word, prevent loss of data 
-
+  free(add);  
+  fclose(fptr); 
 }
+
+
+void sigint_handler(int sig_num) {   
+  // ctrl-c, if there were not multiple threads and all the possible blocking, could use a flag
+  // and do clean_up outside main loop, but there are so I focus on cleaning up heap memory
+   
+  for(int i = 0; i<dictionary_count; ++i){
+    // free each string 
+    if(dictionary_stored_here[i] == NULL)
+      continue; 
+
+    free(dictionary_stored_here[i]); 
+  } 
+
+  free(dictionary_stored_here); // finally, free the structure 
+  fclose(fptr); 
+
+  exit(1); 
+}
+
