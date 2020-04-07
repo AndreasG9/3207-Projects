@@ -1,6 +1,4 @@
-# Program Description 
-## Andreas Gagas     Project 3    spellchecker.c - Network Spell Checker 
-
+## Andreas Gagas     Project 3    spellchecker.c - Network Spell Checker Program Description
 
 ## Design 
 <br/>To begin, I started small, before establishing the network (given code), I defined a structure for all strings in the dictionary file (used DEFAULT DICTIONARY) to be stored. The function fill_dictionary_structure(), iterates through the file and copies each string (tokenize first space, null terminate the string) to char **dictionary_stored_here, who size was determined by count of words in the dictionary file. 
