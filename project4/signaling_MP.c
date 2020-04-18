@@ -19,15 +19,12 @@ signaling_MP.c - Signaling with multi-processes
 #include <assert.h> 
 //#define _POSIX_C_SOURCE 1
 
-// TODO 
-// parent process
-// 4 signal handling processes
-// 3 signal generating processes
-// 1 reporting process
-
 
 void signal_generating(); 
-void signal_handling(); 
+
+void signal_handling_sigusr1();
+void signal_handling_sigusr2();
+
 void signal_handling_handler(int signal); 
 void reporting(); 
 
@@ -55,20 +52,10 @@ struct shared_val{
   
 } *shared_ptr; // CHILD can access shm_ptr 
 
-void clean_up(int signal){
 
-  puts("detached from shared memory region"); 
-
-  if(signal == SIGINT){
-    shmdt(shared_ptr); 
-  }
-}
-
-
+void clean_up(int signal); 
 
 // typedef unsigned long sigset_t; // kept getting sigset_t undefined, maybe this will work
-
-
 
 
 int main (int argc, char *argv[]){
@@ -107,15 +94,18 @@ int main (int argc, char *argv[]){
   pthread_mutex_init(&(shared_ptr->lock_sigusr1_recieved), &attr); 
   pthread_mutex_init(&(shared_ptr->lock_sigusr2_recieved), &attr); 
 
+  //printf("INIT %d %d %d %d\n", shared_ptr->sigusr1_sent_counter, shared_ptr->sigusr2_sent_counter, shared_ptr->sigusr1_recieved_counter, shared_ptr->sigusr2_recieved_counter);  
 
-  // testing 
-  //signal(SIGUSR1, signal_generating_handler1); 
-  // spawn 3 signal generating processes 
+
+
 
   // spawn child processes ... 
+
   pid_t pids[8]; 
 
-  for(int i =0; i<8; ++i){
+  for(int i = 0; i<8; ++i){
+
+    pids[i] = fork(); 
 
     if(pids[i] == -1){
       fprintf(stderr, "%s\n", "fork() failed");
@@ -123,71 +113,57 @@ int main (int argc, char *argv[]){
     }
 
     else if(pids[i] == 0){
-      
+      // [0-1] sigusr1 handling 
+      // [2-3] sigusr2 handling
+      // [4-6] signal generating 
+      // [7] reporting 
+
+      if(i == 0 || i == 1)
+        signal_handling_sigusr1(); 
+      else if(i == 2 || i == 3)
+        signal_handling_sigusr2(); 
+      else if(i == 4 || i == 5 || i == 6)
+        signal_generating(); 
+      else if(i == 7)
+          reporting(); 
     }
 
+    else{
+      if((i+1) == 8){
+        wait(NULL); 
+        puts("!"); 
+        exit(1); 
+      }
 
+    }
 
   }
 
 
 
-  // for(int j = 0; j<3; ++j){
+  signal(SIGINT, clean_up); // testing, ctrl-c 
 
-  //   pid_t pid = fork(); 
-
-  //   if(pid == -1){
-  //     fprintf(stderr, "%s\n", "signal generating: could not fork()");
-  //     exit(1); 
-  //   }
-
-  //   else if(pid == 0){
-  //     // CHILD, set function to handle signal 
-  //     signal(SIGUSR1, signal_handling_handler1);
-  //     signal(SIGUSR2, signal_handling_handler2); 
-  //     //signal_generating_handler(); // 3 child processes will sit here and generate signals  
-
-  //     while(1){
-  //       sleep(1); 
-  //     }
-
-  //   }
-
-  //   else{
-  //     // PARENT, will send signal to child 
-  //     sleep(1);
-  //     parent_function(pid); 
-  //   }
-  // } 
-
-  // spawn 4 signal handling processes 
-  // for(int i = 0; i<4; ++i){
-    
-  // }
-
-  // spawn reporting process
-
-  // control execution duration ... 
+  
 
 
-  signal(SIGINT, clean_up); 
-
+  // VARIABLE, for testing parent wait x amount seconds then exit program 
   while(1){
-    sleep(1); 
-  }
+    sleep(5);
 
+
+    shmdt(shared_ptr); 
+    exit(1); // testing 5 sec, exit  
+  }  
   //shmdt(shared_ptr); 
+
+  // SIGTERM HANDLER TODO, program done execution 
+
+  // for(int i =0; i<8; ++i){
+  //   kill(pids[i], ); 
+  // }
 
 }
 
-
-// void parent_function(pid_t child_pid){
-//   // TESTING 
-
-//   kill(child_pid, SIGUSR1); 
-//   puts("sent SIGUSR1 to child"); 
-//   waitpid(child_pid, NULL, 0); 
-// }
 
 
 
@@ -195,17 +171,15 @@ void signal_generating(){
   // indefinitely loop, select SIGUSR1 or SIGUSR2 to send to processes
   // increment appropiate counter 
 
-  printf("hello i am %d\n", getpid()); 
+  printf("generating %d\n", getpid()); 
 
-  int j =0; 
+  int j = 0; 
 
-  //while(1){
-    while(j<10){
-
+  while(1){
     
     sleep_random_interval(.01, .1); // sleep [.01-.1] 
     int signal = random_signal(); 
-    printf("signal hello : %d\n", signal); 
+    //printf("signal hello : %d\n", signal); 
 
     exit(1); 
 
@@ -218,10 +192,6 @@ void signal_generating(){
       pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
       shared_ptr->sigusr1_sent_counter++; 
       pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
-
-      // pthread_mutex_lock(&lock_sigusr1_sent);
-      // ++sigusr1_sent_counter;
-      //pthread_mutex_unlock(&lock_sigusr1_sent);
     }
 
     else{
@@ -231,9 +201,6 @@ void signal_generating(){
       shared_ptr->sigusr2_sent_counter++; 
       pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
     }
-
-
-    ++j; 
 
     // shmdt(shared_ptr); 
 
@@ -297,27 +264,39 @@ int time_details(){
 
 }
 
-void signal_handling(){
-  // indefinitely loop (will be 4 child processes in this function) ... 
-  // 2 for SIGUSR1, 2 for SIGUSR2
+
+void signal_handling_sigusr1(){
+  // indefinitely loop (will be 2 child processes in this function) ... 
+  // 2 for SIGUSR1 (PID INDEXES 0 AND 1),
   // SIGNAL sent, goes to all 4, block other 
 
-  int i =0; 
+  printf("sigusr1 handling %d\n", getpid()); 
 
- // while(1){
+  block_sigusr2(); // block other signal type as signal generating sends signal to all child processes 
+  signal(SIGUSR1, signal_handling_handler); // set signal 
 
-   while(i<10){
-
-    // block other, call signal_handling 
-
-
-    //signal_handling_handler(signal); 
-
-    
-     ++i; 
+  while(1){
+    sleep(1); 
   }
 
 }
+
+void signal_handling_sigusr2(){
+  // indefinitely loop (will be OTHER 2 child processes in this function) ... 
+  //  2 for SIGUSR2 (PID INDEXES 2 AND 3)
+
+  printf("sigusr2 handling %d\n", getpid()); 
+
+  block_sigusr1(); // block other signal type 
+  signal(SIGUSR2, signal_handling_handler); // set signal 
+
+  while(1){
+    sleep(1); 
+  }
+
+}
+
+
 
 
 void block_sigusr1(){
@@ -336,22 +315,19 @@ void block_sigusr1(){
 }
 
 void block_sigusr2(){
+  // identical to block sigusr1, but block sigusr2 
 
-  
   sigset_t sigset; 
   sigemptyset(&sigset); 
   sigaddset(&sigset, SIGUSR2); // add SIGUSR2 to set 
   sigprocmask(SIG_BLOCK, &sigset, NULL); // mask/ filter out SIGUSR1 
-
 }
-
-
 
 
 void signal_handling_handler(int signal){
 
   if(signal == SIGUSR1){
-    // signal arrived, increment counter 
+    // signal arrived, increment counter in shared memory segment 
 
     pthread_mutex_lock(&(shared_ptr->lock_sigusr1_recieved));
     shared_ptr->sigusr1_recieved_counter++;
@@ -377,17 +353,27 @@ void reporting(){
 
   // every 10 signals, REPORT: system time, shared counters (SIGUSR1/SIGUSR2: sent, recieved), average time interval between signal types 
 
-  FILE *fptr = fopen("data.log", "w"); 
+  printf("reporting %d\n", getpid()); 
+
+  // FILE *fptr = fopen("data.log", "w"); 
+  // fclose(fptr); 
 
   while(1){
-
-
 
 
   }
 
 
 
+}
+
+void clean_up(int signal){
+
+  puts("detached from shared memory region"); 
+
+  if(signal == SIGINT){
+    shmdt(shared_ptr); 
+  }
 }
 
 // void signal_handling_handler2(int signal){
