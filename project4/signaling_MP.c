@@ -47,26 +47,14 @@ struct shared_val{
 } *shared_ptr; // CHILD can access shm_ptr 
 
 
-// typedef unsigned long sigset_t; // kept getting sigset_t undefined, maybe this will work
+// testing 
+void my_handler(int signum){
 
-int exit_loop; 
-
-
-
-void my_handler(int signum)
-{
-    if (signum == SIGUSR1)
-    {
-        printf("Received SIGUSR1!\n");
-    }
-    else if (signum == SIGUSR2)
-    {
-        printf("Received SIGUSR2!\n");
-    }
-
+  if(signum = SIGUSR1){}
+   // puts("recieved sigusr1");
+  else if(signum == SIGUSR2){}
+    //puts("recieved sigusr2"); 
 }
-
-
 
 
 int main (int argc, char *argv[]){
@@ -106,11 +94,12 @@ int main (int argc, char *argv[]){
 
  // printf("INIT %d %d %d %d\n", shared_ptr->sigusr1_sent_counter, shared_ptr->sigusr2_sent_counter, shared_ptr->sigusr1_recieved_counter, shared_ptr->sigusr2_recieved_counter);   
 
-  exit_loop = 1; 
 
-  signal(SIGUSR1, my_handler); 
+  // signal(SIGUSR1, signal_handling_sigusr1);
+  // signal(SIGUSR2, signal_handling_sigusr2); 
+
+  signal(SIGUSR1, my_handler);
   signal(SIGUSR2, my_handler); 
-
 
   // spawn child processes ... 
   pid_t pids[8]; 
@@ -147,13 +136,6 @@ int main (int argc, char *argv[]){
         reporting(); 
         break; 
       }
-
-
-      // if(i == 0 || i == 1 || i == 2){
-      //   signal_generating(); 
-      //   printf("i is %d\n", i); 
-      // }
-
     }
 
     //else if (pids[i] > 0){
@@ -163,7 +145,7 @@ int main (int argc, char *argv[]){
         continue; 
 
      // wait(NULL); 
-      puts("1"); 
+      puts("parent, other processes forked"); 
     }
 
   }
@@ -211,16 +193,13 @@ void signal_generating(){
 
   int j = 0; 
 
- // while(1){}
+ // while(1){
 
-  // //while(1){
-  while(j<1){
-    
     sleep_random_interval(.01, .1); // sleep [.01-.1] 
-    printf("%d is back\n", getpid()); 
+    //printf("%d is back\n", getpid()); 
 
     int signal = random_signal(); 
-    printf("%d, signal value : %d\n", getpid(), signal);
+   // printf("%d, signal value : %d\n", getpid(), signal);
 
 
   // send the signal to "its peers"/ all child processes (signal is either SIGUSR1 or SIGUSR2)
@@ -230,7 +209,15 @@ void signal_generating(){
         exit(0); 
      }
      else{
-       puts("I send SIGUSR1"); 
+       puts("I sent SIGUSR1"); 
+
+        //increment global counter for sigusr1 sent 
+        pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
+        shared_ptr->sigusr1_sent_counter++; 
+        pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
+
+        
+        printf("counter SENT sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
      }
    }
      
@@ -240,41 +227,23 @@ void signal_generating(){
         exit(0); 
       }
       else{
-        puts("I send SIGUSR2"); 
+        puts("I sent SIGUSR2"); 
+       // increment global counter for sigusr2 sent 
+        pthread_mutex_lock(&(shared_ptr->lock_sigusr2_sent)); 
+        shared_ptr->sigusr2_sent_counter++; 
+        pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
+
+        printf("counter SENT sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
       }
     }
      
 
      ++j; 
 
+ // }
 
-    
-   
-
-  //   kill(0, signal); // send the signal to "its peers"/ all child processes (signal is either SIGUSR1 or SIGUSR2)
-
-  //   if(signal == SIGUSR1){
-  //     // increment global counter for sigusr1 sent 
-
-  //     pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
-  //     shared_ptr->sigusr1_sent_counter++; 
-  //     pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
-  //   }
-
-  //   else{
-  //     // increment global counter for sigusr2 sent 
-
-  //     pthread_mutex_lock(&(shared_ptr->lock_sigusr2_sent)); 
-  //     shared_ptr->sigusr2_sent_counter++; 
-  //     pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
-  //   }
-
-  //   // shmdt(shared_ptr); 
-
-  }
-
-  //printf("counter sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
-  //printf("counter sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
+  // printf("counter sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
+  // printf("counter sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
 }
 
 void sleep_random_interval(double low, double high){
@@ -303,7 +272,7 @@ int random_signal(){
 
   int random_int = (rand() % 2) + 1; // [1-2]
 
-  // if(random_int == 0)
+  // if(random_int == 1)
   //   return SIGUSR1;
   // else
   //   return SIGUSR2; 
@@ -348,14 +317,16 @@ void signal_handling_sigusr1(){
 
   printf("sigusr1 handling pid %d\n", getpid()); 
 
-  //while(1){}
+  signal(SIGUSR1, signal_handling_handler); // set signal 
+  block_sigusr2(); // block other signal type as signal generating sends signal to all child processes 
+  
 
-  // block_sigusr2(); // block other signal type as signal generating sends signal to all child processes 
-  // signal(SIGUSR1, signal_handling_handler); // set signal 
-
-  // while(1){
-  //   sleep(1); 
-  // }
+  //while(1){
+  sleep(5);
+  puts("done"); 
+  fflush(stdout);
+  return;    
+ // }
 
 }
 
@@ -365,15 +336,13 @@ void signal_handling_sigusr2(){
 
   printf("sigusr2 handling pid %d\n", getpid()); 
 
-   //while(1){}
-
-
-  // block_sigusr1(); // block other signal type 
-  // signal(SIGUSR2, signal_handling_handler); // set signal 
+  signal(SIGUSR2, signal_handling_handler); // set signal
+  block_sigusr1(); // block other signal type  
 
   // while(1){
-  //   sleep(1); 
+  //   sleep(5);   
   // }
+
 
 }
 
@@ -411,7 +380,8 @@ void signal_handling_handler(int signal){
     pthread_mutex_lock(&(shared_ptr->lock_sigusr1_recieved));
     shared_ptr->sigusr1_recieved_counter++;
     pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_recieved));
-
+    
+    //printf("counter RECIEVED sigusr1: %d\n", shared_ptr->sigusr1_recieved_counter); 
   }
 
   else if(signal == SIGUSR2){
@@ -420,7 +390,10 @@ void signal_handling_handler(int signal){
     pthread_mutex_lock(&(shared_ptr->lock_sigusr2_recieved));
     shared_ptr->sigusr2_recieved_counter++;
     pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_recieved));
+
+    //printf("counter RECIEVED sigusr2: %d\n", shared_ptr->sigusr2_recieved_counter); 
   }
+
 
 }
 
