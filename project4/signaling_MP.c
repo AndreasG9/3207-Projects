@@ -18,24 +18,24 @@ signaling_MP.c - Signaling with multi-processes
 #include <sys/shm.h>
 #include <assert.h> 
 #include <sys/types.h>
-//#define _POSIX_C_SOURCE 1
-#define BILLION 1000000000L
+#include <string.h>
 
 void signal_generating(); 
 void signal_handling_sigusr1();
 void signal_handling_sigusr2();
 void signal_handling_handler(int signal); 
 void signal_handling_handler2(int signal);
+void reporting(); 
+void reporting_handler(int signal); 
 void block_sigusr1();
 void block_sigusr2();
 void block_both();
-
-void reporting(); 
 void sleep_random_interval(double low, double high); 
 int random_signal(); 
-double time_diff(struct timespec start, struct timespec stop); 
+double calc_average(double diff[10]); 
+//double time_diff(struct timespec start, struct timespec stop); 
 
-void reporting_handler(int signal); 
+
 //void clean_up(int signal); 
 
 
@@ -69,9 +69,6 @@ struct timespec prev_sigusr2;
 
 int sigusr1_index_differences; 
 int sigusr2_index_differences; 
-
-// double sigusr1_avg;
-// double sigusr2_avg;
 
 
 
@@ -209,16 +206,16 @@ int main (int argc, char *argv[]){
   
   }
 
-  puts("PARENT");
-  printf("SENT sig1  %d\n", shared_ptr->sigusr1_sent_counter);
-  printf("SENT sig2 %d\n", shared_ptr->sigusr2_sent_counter);
+  // puts("PARENT");
+  // printf("SENT sig1  %d\n", shared_ptr->sigusr1_sent_counter);
+  // printf("SENT sig2 %d\n", shared_ptr->sigusr2_sent_counter);
   
-  printf("RECIEVE sig1 %d\n", shared_ptr->sigusr1_recieved_counter);
-  printf("RECIEVE sig2 %d\n", shared_ptr->sigusr2_recieved_counter);
+  // printf("RECIEVE sig1 %d\n", shared_ptr->sigusr1_recieved_counter);
+  // printf("RECIEVE sig2 %d\n", shared_ptr->sigusr2_recieved_counter);
 
-  printf("TOTAL RECIEVED %d\n", shared_ptr->sigusr1_recieved_counter + shared_ptr->sigusr2_recieved_counter);
-  puts("\n");
-  fflush(stdout);
+  // printf("TOTAL RECIEVED %d\n", shared_ptr->sigusr1_recieved_counter + shared_ptr->sigusr2_recieved_counter);
+  // puts("\n");
+  // fflush(stdout);
 
     // if((shared_ptr->sigusr1_recieved_counter + shared_ptr->sigusr2_recieved_counter) != 30)
     //   puts("SHIEEEEEEEEEEEEEEEEEEEET");
@@ -263,7 +260,7 @@ void signal_generating(){
   int j = 0; 
  // while(1){
 
-   while(j<4){
+   while(j<7){
 
     sleep_random_interval(.01, .1); // sleep [.01-.1] 
     //printf("%d is back\n", getpid()); 
@@ -315,8 +312,6 @@ void signal_generating(){
     sleep(1);
   }
 
-  // printf("counter sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
-  // printf("counter sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
 }
 
 void sleep_random_interval(double low, double high){
@@ -500,114 +495,67 @@ void reporting(){
   sigusr1_index_differences = 0; 
   sigusr2_index_differences = 0; 
 
-  // saved_stop.tv_sec = 0; 
-  // saved_stop.tv_nsec = 0; 
-
   int i = 0; 
 
   while(1){ 
 
     pause(); // will "unpause" when handler is called, ... 
+   // printf("%d\n", reporting_counter);
     ++i; 
 
     //if(i == 10){
-
-    //puts("hello");
-
-    if(i == 10){
-
-    //   double sigusr1_avg = 0 ;
-
-      int j = 0;
-      double sum = 0; 
-
-
-      while(sigusr1_differences[j]){
-       sum += sigusr1_differences[j];
-       ++j; 
-     }
-
-      double avg = sum / j; 
-      printf("sig1 avg: %lf\n", avg);
-
-
-
-      j = 0; 
-      sum = 0; 
-      avg = 0; 
-
-     while(sigusr2_differences[j]){
-       sum += sigusr2_differences[j];
-       ++j; 
-     }
-
-      if(sum == 0){
-        // possible recent 10 signals, this recieved none 
-        avg = 0; 
-      }
-      else
-        avg = sum / (j);
-
-     printf("sig2 avg: %lf\n", avg);
-
-    }
-
-
-    // the two differences array hold the differences, just sum up values (variable, could be 1-10), and avg (simple);
-    // double sigusr1_avg = 0 ;
-    // double sigusr2_avg = 0 ;
-
-    // int j = 0;
-    // double sum = 0; 
-
-    // while(sigusr1_differences[j]){
-    //   sum += sigusr1_differences[j];
-    //   ++j; 
-    // }
-
-    // sigusr1_avg = sum / (j);
-
-    // j, sum = 0;
-
-    // while(sigusr2_differences[j]){
-    //   sum += sigusr2_differences[j];
-    //   ++j; 
-    // }
-
-    // sigusr2_avg = sum / (j);
+      //INCOMING REPORT 
+    if(reporting_counter % 10 == 0){
+      
+      i = 0; 
 
     // PUT INTO SEPERATE LOG FILE 
+      
+      struct timespec current;
 
-    // printf("SYSTEM TIME AT REPORT: %ld\n", start.tv_sec); 
+      if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
+      fprintf(stderr, "%s", "clock_gettime error");
+      exit(1);
+      }
 
-    // printf("sig1 S %d\n", shared_ptr->sigusr1_sent_counter);
-    // printf("sig2 S %d\n", shared_ptr->sigusr2_sent_counter);
+      puts("");
+      printf("SYSTEM TIME AT REPORT: %ld\n", current.tv_nsec); 
+
+      printf("SIGUSR1 S: %d\n", shared_ptr->sigusr1_sent_counter);
+      printf("SIGUSR2 S: %d\n", shared_ptr->sigusr2_sent_counter);
   
-    // printf("sig1 R %d\n", shared_ptr->sigusr1_recieved_counter);
-    // printf("sig2 R %d\n", shared_ptr->sigusr2_recieved_counter);
+      printf("SIGUSR1 R: %d\n", shared_ptr->sigusr1_recieved_counter);
+      printf("SIGUSR2 R: %d\n", shared_ptr->sigusr2_recieved_counter);
 
-    // printf("sig1 counter: %d\n", report_sigusr1);
-    // printf("sig2 counter: %d\n", report_sigusr2);
+      printf("SIGUSR1 REPORT SENT counter: %d\n", report_sigusr1);
+      printf("SIGUSR2 REPORT SENT counter: %d\n", report_sigusr2);
+      printf("SIGUSR2 REPORT TOTAL counter: %d\n", reporting_counter);
 
+  
+      double avg; 
 
-    //printf("Average time between SIGUSR1 calls: %lf\n", sigusr1_avg);
-    //  printf("Average time between SIGUSR2 calls: ");
+      avg = calc_average(sigusr1_differences); 
+      printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
 
-    // RESET, 10 signals reached 
-    // i = 0; 
+      avg = calc_average(sigusr2_differences); 
+      printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
+
+      // RESET, 10 signals reached 
+      // i = 0; 
     // prev_sigusr1.tv_nsec = 0; 
-    // prev_sigusr2.tv.nsec = 0; 
-    // sigusr1_index_differences = 0; 
-    // sigusr2_index_differences = 0; 
-    // memset(sigusr1_differences, 0, sizeof(sigusr1_differences)); 
-    // memset(sigusr2_differences, 0, sizeof(sigusr2_differences)); 
+    // prev_sigusr1.tv_sec = 0; 
+    // prev_sigusr2.tv_nsec = 0; 
+    // prev_sigusr1.tv_sec = 0; 
+      sigusr1_index_differences = 0; 
+      sigusr2_index_differences = 0; 
+      memset(sigusr1_differences, 0, sizeof(sigusr1_differences)); 
+      memset(sigusr2_differences, 0, sizeof(sigusr2_differences)); 
+      
+    } 
 
+   // pause();
 
-    //printf("PAUSE FUNCTION %d\n", i);
-    //sleep(1);
-    //printf("here %d\n", getpid());
   }
-
 
 
   while(1){
@@ -619,7 +567,7 @@ void reporting(){
 void reporting_handler(int signal){
   // recieves both SIGUSR1 && SIGUSR2 
   // increment personal counters (SIGUSR1, SIGUSR2, and BOTH)
-  // Track current system time, call time_details(...) to get difference between a pair of calls (same signal),
+  // Track current system time,  to get difference between a pair of calls (same signal),
   // store in an array of differences (one for SIGUSR1, one for SIGUSR2) ... 
   // After 10 signals, calc. the average of those differences, report 
 
@@ -635,7 +583,6 @@ void reporting_handler(int signal){
    ++reporting_counter; // global counter, only 1 reporting process
 
 
-  
 
   if(signal == SIGUSR1){
 
@@ -696,7 +643,6 @@ void reporting_handler(int signal){
     // double difference = (((prev_sigusr2.tv_sec - current.tv_sec) * 1e9) + ((current.tv_nsec - prev_sigusr2.tv_nsec))) * 1e-9;
 
     sigusr2_differences[sigusr2_index_differences] = difference; 
-
     //sigusr2_differences[sigusr2_index_differences] = time_diff(prev_sigusr2, current); 
 
     // new prev time = current time 
@@ -705,10 +651,35 @@ void reporting_handler(int signal){
 
     ++sigusr2_index_differences;
   }
-
-
-    
+  
 }
+
+double calc_average(double diff[10]){
+    // calc. avg based on diffs in sigusr1_differences[10] and sigusr2_diferences[10]
+
+  int j = 0;
+  double sum = 0; 
+  double avg; 
+
+  while(diff[j]){
+    sum += diff[j];
+    ++j; 
+  }
+
+  if(sum == 0){
+    // possible recent 10 signals, this recieved none (does happen, occasionally)
+    avg = 0; 
+  }
+  else{
+    avg = (sum / j); 
+  }
+
+  return avg; 
+
+}
+
+
+
 
 
 // void clean_up(int signal){
@@ -735,25 +706,26 @@ void reporting_handler(int signal){
 
 // }
 
-double time_diff(struct timespec start, struct timespec stop){
-  // start = previous time 
-  // stop = current time (from report_handler)
 
-  // struct timespec stop;
+// // testing 
+// double time_diff(struct timespec start, struct timespec stop){
+//   // start = previous time 
+//   // stop = current time (from report_handler)
 
-  // if(clock_gettime( CLOCK_MONOTONIC, &stop) == -1 ){ // get CURRENT system time 
-  //   fprintf(stderr, "%s", "clock_gettime error");
-  //   exit(1);
-  // }
+//   // struct timespec stop;
 
+//   // if(clock_gettime( CLOCK_MONOTONIC, &stop) == -1 ){ // get CURRENT system time 
+//   //   fprintf(stderr, "%s", "clock_gettime error");
+//   //   exit(1);
+//   // }
 
-  // printf("start: %lf\n", start.tv_nsec/1e9);
-  // printf("stop: %lf\n", stop.tv_nsec/1e9);
+//   // printf("start: %lf\n", start.tv_nsec/1e9);
+//   // printf("stop: %lf\n", stop.tv_nsec/1e9);
 
-  // difference between two times
-  double difference = (((stop.tv_sec - start.tv_sec) * 1e9) + ((stop.tv_nsec - start.tv_nsec))) * 1e-9; // reported in seconds (better visually)
+//   // difference between two times
+//   double difference = (((stop.tv_sec - start.tv_sec) * 1e9) + ((stop.tv_nsec - start.tv_nsec))) * 1e-9; // reported in seconds (better visually)
 
-  //printf("DIFFERENCE: %lf\n", difference);
+//   //printf("DIFFERENCE: %lf\n", difference);
 
-  return difference; 
-}
+//   return difference; 
+// }
