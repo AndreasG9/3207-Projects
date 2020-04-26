@@ -34,18 +34,14 @@ void sleep_random_interval(double low, double high);
 int random_signal(); 
 double calc_average(double diff[10]); 
 //double time_diff(struct timespec start, struct timespec stop); 
-
 void clean_up_handler(int signal); 
-
 
 struct shared_val{
 
   int sigusr1_recieved_counter; 
   int sigusr2_recieved_counter; 
   int sigusr1_sent_counter; 
-  int sigusr2_sent_counter; 
-
-  //int total_counter; // for report process to RELAY to parent 
+  int sigusr2_sent_counter;  
 
   pthread_mutex_t lock_sigusr1_sent; 
   pthread_mutex_t lock_sigusr2_sent; 
@@ -69,7 +65,6 @@ struct timespec prev_sigusr2;
 
 int sigusr1_index_differences; 
 int sigusr2_index_differences; 
-
 
 
 int main (int argc, char *argv[]){
@@ -136,6 +131,26 @@ int main (int argc, char *argv[]){
       // [4-6] signal generating 
       // [7] reporting 
 
+      // if(i == 0 || i == 1){
+      //   signal_handling_sigusr1(); 
+      //   pids2[i] = getpid();
+      // }
+      // else if(i == 2 || i == 3){
+      //   signal_handling_sigusr2();
+      //   pids2[i] = getpid();
+      // }
+      // else if(i == 4){
+      //   reporting();
+      //   pids2[i] = getpid();
+      // } 
+
+      // else if(i == 5 || i == 6 || i == 7){
+      //    block_both();
+      //    signal_generating(); 
+      //    pids2[i] = getpid();
+      // }
+
+
       if(i == 0 || i == 1){
         signal_handling_sigusr1(); 
         pids2[i] = getpid();
@@ -156,55 +171,39 @@ int main (int argc, char *argv[]){
       }
     }
 
-    //else if (pids[i] > 0){
     else{
       // PARENT 
       if((i) != 7)
         continue; 
-
-      // int status;
-      // waitpid(pids[i], &status, 0); 
-     // wait(NULL); 
-      puts("parent, other processes forked"); 
-      parent = getpid();
-
-      // PARENT, block both signals 
-      // signal(SIGUSR1, block_later);
-      // signal(SIGUSR2, block_later);
-      block_both();
+      
+      printf("parent pid %d", getpid());
+      block_both(); // PARENT, block both signals 
     }
 
   }
 
-  puts("WILL RUN FOR 30 SECONDS ... ");
+
+  puts("\n'ENTER' to stop program execution\n");
 
   while(1){
-    //sleep(1); // if sleep, wont stop on the "dot"
 
     // sleep(30); 
 
-    // sleep(5);
-    // break;
+    if(getchar())
+      break; 
 
-    // if((shared_ptr->sigusr1_sent_counter) + (shared_ptr->sigusr2_sent_counter) >= 10)
+    // if((shared_ptr->sigusr1_recieved_counter) + (shared_ptr->sigusr2_recieved_counter) == 100)
     //   break; 
-    // if((shared_ptr->sigusr1_recieved_counter) + (shared_ptr->sigusr2_recieved_counter) == 20)
-    //   break; 
-
-    if(shared_ptr->total_counter >= 100)
-      break;
   }
 
-  puts(""); 
+  puts("SEE DATA.LOG for REPORTS\n");
+  shmdt(shared_ptr); // parent, detach 
 
   for(int i = 0; i<8; ++i){
-    // signal all child, handler will detach from shared memory region and exit(0)
+    // signal to all, handler will detach from shared memory region and exit(0)
     kill(pids2[i], SIGTERM); 
   }
 
-  shmdt(shared_ptr); // parent, detach 
-
-  puts("SEE DATA.LOG for REPORTS");
 }
 
 void signal_generating(){
@@ -213,62 +212,76 @@ void signal_generating(){
 
   printf("generating pid %d\n", getpid()); 
   signal(SIGTERM, clean_up_handler);
+  //block_both();
 
-
-  int j = 0; 
   while(1){
 
-  // while(j<7){
-
     sleep_random_interval(.01, .1); // sleep [.01-.1] 
-    //printf("%d is back\n", getpid()); 
 
     int signal = random_signal();       
-
     //printf("%d will SEND SIGUSR: %d\n", getpid(), signal); 
 
     // send the signal to "its peers"/ all child processes (signal is either SIGUSR1 or SIGUSR2)
-    if(signal == 1){
-     if( kill(0, SIGUSR1) == -1){
-        puts("failed to send signal SIGUSR1");
-        exit(0); 
-     }
-     else{
-
-        //increment counter for sigusr1 sent 
-        pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
-        shared_ptr->sigusr1_sent_counter++; 
-        pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
-
-       // printf("counter SENT sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
-     }
-   }
-     
-    else{
-      if( kill(0, SIGUSR2) == -1){
-        puts("failed to send signal SIGUSR2");
-        exit(0); 
-      }
-      else{
-
-       // increment counter for sigusr2 sent 
-        pthread_mutex_lock(&(shared_ptr->lock_sigusr2_sent)); 
-        shared_ptr->sigusr2_sent_counter++; 
-        pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
-
-       // printf("counter SENT sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
-      }
+    if( kill(0, signal) == -1){
+      puts("failed to send signal");
+      exit(0); 
     }
 
-    ++j; 
+    if(signal == SIGUSR1){
+      //increment counter for sigusr1 sent 
+      pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
+      shared_ptr->sigusr1_sent_counter++; 
+      pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
+
+      //printf("counter SENT sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
+    }
+
+    else{
+      //increment counter for sigusr2 sent 
+      pthread_mutex_lock(&(shared_ptr->lock_sigusr2_sent)); 
+      shared_ptr->sigusr2_sent_counter++; 
+      pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
+
+       // printf("counter SENT sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
+    }
+
+
+
+  //   if(signal == 1){
+  //    if( kill(0, SIGUSR1) == -1){
+  //       puts("failed to send signal SIGUSR1");
+  //       exit(0); 
+  //    }
+  //    else{
+
+  //       //increment counter for sigusr1 sent 
+  //       pthread_mutex_lock(&(shared_ptr->lock_sigusr1_sent)); 
+  //       shared_ptr->sigusr1_sent_counter++; 
+  //       pthread_mutex_unlock(&(shared_ptr->lock_sigusr1_sent)); 
+
+  //      // printf("counter SENT sigusr1: %d\n", shared_ptr->sigusr1_sent_counter); 
+  //    }
+  //  }
+     
+  //   else{
+  //     if( kill(0, SIGUSR2) == -1){
+  //       puts("failed to send signal SIGUSR2");
+  //       exit(0); 
+  //     }
+  //     else{
+
+  //      // increment counter for sigusr2 sent 
+  //       pthread_mutex_lock(&(shared_ptr->lock_sigusr2_sent)); 
+  //       shared_ptr->sigusr2_sent_counter++; 
+  //       pthread_mutex_unlock(&(shared_ptr->lock_sigusr2_sent)); 
+
+  //      // printf("counter SENT sigusr2: %d\n", shared_ptr->sigusr2_sent_counter); 
+  //     }
+  //   }
+
      
   }
 
-
-
-  while(1){
-    sleep(1);
-  }
 
 }
 
@@ -280,7 +293,6 @@ void sleep_random_interval(double low, double high){
   srand(num); 
 
   double random_double = (double)rand() * (low - high) / (double)RAND_MAX + high; // expected to be between [.01 - .1]  
- // printf("%lf\n", random_double); 
 
   double microseconds = (random_double * 1000000); // get microseconds
 
@@ -291,11 +303,10 @@ void sleep_random_interval(double low, double high){
   sleeep.tv_sec = 0; // [.01-.1] seconds, always under 1  
   sleeep.tv_nsec = microseconds * 1000; // now nanoseconds 
 
-  // printf("I (%d) will sleep for %ld nanoseconds\n", getpid(), sleeep.tv_nsec); 
-  //printf("I (%d) will sleep for %lf seconds\n", getpid(), (sleeep.tv_nsec/1e9)); 
-
-
-  nanosleep(&sleeep, &rem);
+  if(nanosleep(&sleeep, &rem) != 0){
+    puts("nanosleep error");
+    exit(1);
+  }
 
 }
 
@@ -307,15 +318,15 @@ int random_signal(){
 
   int random_int = (rand() % 2) + 1; // [1-2]
 
-  // if(random_int == 1)
-  //   return SIGUSR1;
-  // else
-  //   return SIGUSR2; 
-
   if(random_int == 1)
-    return 1; 
+    return SIGUSR1;
   else
-    return 2; 
+    return SIGUSR2; 
+
+  // if(random_int == 1)
+  //   return 1; 
+  // else
+  //   return 2; 
   
 }
 
@@ -325,7 +336,6 @@ void signal_handling_sigusr1(){
   // SIGNAL sent, goes to all 4, block other 
 
   printf("sigusr1 handling pid %d\n", getpid()); 
-  fflush(stdout);
 
   signal(SIGUSR1, signal_handling_handler); // set signal for THIS process 
   block_sigusr2(); // block other signal type as signal generating sends signal to all child processes 
@@ -424,7 +434,6 @@ void block_both(){
   sigaddset(&sigset, SIGUSR1); // add SIGUSR2 to set 
   sigaddset(&sigset, SIGUSR2); // add SIGUSR2 to set 
   sigprocmask(SIG_BLOCK, &sigset, NULL); // mask/ filter out SIGUSR1 
-
 }
 
 void reporting(){
@@ -436,6 +445,8 @@ void reporting(){
   signal(SIGUSR1, reporting_handler);
   signal(SIGUSR2, reporting_handler);
   signal(SIGTERM, clean_up_handler);
+  FILE *fptr = fopen("data.log", "w");
+  fclose(fptr);
 
   printf("reporting pid %d\n", getpid()); 
 
@@ -455,16 +466,10 @@ void reporting(){
   while(1){ 
 
     pause(); // will "unpause" when handler is called, ... 
-   // printf("%d\n", reporting_counter);
-    ++i; 
 
-    //if(i == 10){
-      //INCOMING REPORT 
-    if(reporting_counter % 10 == 0){
+
+      if(reporting_counter % 10 == 0 && reporting_counter != 0){
       
-     // i = 0; 
-
-     // PUT INTO SEPERATE LOG FILE ?? 
       struct timespec current;
 
       if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
@@ -472,36 +477,37 @@ void reporting(){
       exit(1);
       }
 
-      puts("");
-      printf("SYSTEM TIME AT REPORT: %ld\n", current.tv_nsec); 
 
-      printf("SIGUSR1 S: %d\n", shared_ptr->sigusr1_sent_counter);
-      printf("SIGUSR2 S: %d\n", shared_ptr->sigusr2_sent_counter);
+      
+    //   puts("");
+    //   printf("SYSTEM TIME AT REPORT: %ld\n", current.tv_nsec); 
+
+    //   printf("SIGUSR1 S: %d\n", shared_ptr->sigusr1_sent_counter);
+    //   printf("SIGUSR2 S: %d\n", shared_ptr->sigusr2_sent_counter);
   
-      printf("SIGUSR1 R: %d\n", shared_ptr->sigusr1_recieved_counter);
-      printf("SIGUSR2 R: %d\n", shared_ptr->sigusr2_recieved_counter);
+    //   printf("SIGUSR1 R: %d\n", shared_ptr->sigusr1_recieved_counter);
+    //   printf("SIGUSR2 R: %d\n", shared_ptr->sigusr2_recieved_counter);
 
-      // testing, (not accurate, when stop execution)
-      // printf("SIGUSR1 REPORT SENT counter: %d\n", report_sigusr1); // 
-      // printf("SIGUSR2 REPORT SENT counter: %d\n", report_sigusr2);
-      //printf("REPORT TOTAL counter: %d\n", reporting_counter);
-
+    //   printf("TOTAL REPORT RECEIVED: %d\n", reporting_counter);
 
       double avg; 
 
       avg = calc_average(sigusr1_differences); 
-      printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
+      //printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
 
       avg = calc_average(sigusr2_differences); 
-      printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
+     // printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
+      fptr = fopen("data.log", "a+");
 
+      fprintf(fptr, "\n");
+      fprintf(fptr, "%s%d\n", "SIGUSR1 S: ", shared_ptr->sigusr1_sent_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR2 S: ", shared_ptr->sigusr2_sent_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR1 R: ", shared_ptr->sigusr1_recieved_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR2 R: ", shared_ptr->sigusr2_recieved_counter);
+      fprintf(fptr, "%s%d\n", "TOTAL REPORT RECEIVED: ", reporting_counter);
+      fclose(fptr);
 
       // RESET, 10 signals reached 
-      // i = 0; 
-    // prev_sigusr1.tv_nsec = 0; 
-    // prev_sigusr1.tv_sec = 0; 
-    // prev_sigusr2.tv_nsec = 0; 
-    // prev_sigusr1.tv_sec = 0; 
       sigusr1_index_differences = 0; 
       sigusr2_index_differences = 0; 
       memset(sigusr1_differences, 0, sizeof(sigusr1_differences)); 
@@ -528,7 +534,7 @@ void reporting_handler(int signal){
 
   //printf("CURRENT SYSTEM TIME NSECONDS : %ld\n", current.tv_nsec);
 
-   ++reporting_counter; // global counter, only 1 reporting process
+  //++reporting_counter; // global counter, only 1 reporting process
 
 
   if(signal == SIGUSR1){
@@ -598,7 +604,7 @@ void reporting_handler(int signal){
     ++sigusr2_index_differences;
   }
 
-  
+  ++reporting_counter;
 }
 
 double calc_average(double diff[10]){
@@ -636,6 +642,9 @@ void clean_up_handler(int signal){
 
   exit(0);
 } 
+
+
+
 
 
 // // testing 
