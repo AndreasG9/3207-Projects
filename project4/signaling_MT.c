@@ -43,6 +43,9 @@ pthread_mutex_t lock_sigusr1_received;
 pthread_mutex_t lock_sigusr2_received; 
 
 pthread_t threads[NUM_THREADS];
+double avg_avg1, avg_avg2;  
+
+int apple = 1; 
 
 int main (int argc, char *argv[]){
 
@@ -104,19 +107,30 @@ int main (int argc, char *argv[]){
   //puts("main thread");
   block_both();
 
-  puts("currently running ... ");
+  puts("currently running ...  (multi-threads)");
   puts("\n*************'ENTER' to stop program execution******************\n");
   puts("\n*************'ENTER' to stop program execution******************\n");
 
   while(1){
-    // run program, until ENTER 
+    //while(apple){
+    // run until 10k 
       
     if(getchar())
       break; 
+
+    // sleep(30);
+    // break; 
+
   }
 
   
-  puts("SEE DATA2.LOG for REPORTS\n");
+  puts("SEE t_data.log for REPORTS\n");
+
+  // display avg of avgs for each type 
+  FILE *fptr = fopen("t_data.log", "a+");
+  fprintf(fptr, "\n\n%s%lf%s\n", "SIGUSR1 avg time between receptions: ", avg_avg1, " SECONDS");
+  fprintf(fptr, "%s%lf%s\n", "SIGUSR2 avg time between receptions: ", avg_avg2, " SECONDS");
+  fclose(fptr);
 
   for(int i = 0; i<8; ++i){
   // kill threads 
@@ -161,39 +175,7 @@ void* generating_thread(void* arg){
 
         //printf("SIG2 S: %d\n", sigusr2_sent_counter);
       }
-
-
-    // send the signal to ALL other threads (to mirror processes approach)
-  //   if(signal == 1){
-      
-  //     for(int i =0; i<NUM_THREADS; ++i)
-  //       pthread_kill(threads[i], SIGUSR1);  
-
-  //     // safely increment counter for sigusr1 sent 
-  //     pthread_mutex_lock(&lock_sigusr1_sent); 
-  //     ++sigusr1_sent_counter;
-  //     pthread_mutex_unlock(&lock_sigusr1_sent);
-
-  //     //printf("SIG1 S: %d\n", sigusr1_sent_counter);
-  //   }
-
-  //   else{
-  //     // send SIGUSR2
-
-  //     for(int i =0; i<NUM_THREADS; ++i)
-  //       pthread_kill(threads[i],SIGUSR2);
-
-  //     //safely increment counter for sigusr1 sent 
-  //     pthread_mutex_lock(&lock_sigusr2_sent); 
-  //     ++sigusr2_sent_counter;
-  //     pthread_mutex_unlock(&lock_sigusr2_sent);
-
-  //     //printf("SIG2 S: %d\n", sigusr2_sent_counter);
-  //   }
-
-
   }
-
 
 }
 
@@ -266,21 +248,26 @@ void* reporting_thread(void *arg){
   int retval = 0;
   int signal;
   int report_count = 0; 
-  FILE *fptr = fopen("data2.log", "w");
+  FILE *fptr = fopen("t_data.log", "w");
+  fprintf(fptr, "%s\n", "signaling MULTI_THREADS");
   fclose(fptr);
 
+  // record prev time of received signal 
   struct timespec prev_sigusr1;
   struct timespec prev_sigusr2;
 
   int report_sig1= 0;
   int report_sig2 = 0; 
 
+  // store the differences, for 10 signal interval (every 10 signals)
   double sigusr1_differences[10]; 
   double sigusr2_differences[10]; 
   int sigusr1_index_differences = 0; 
   int sigusr2_index_differences = 0; 
 
-  clock_t prev; 
+  double prev_avg1 = 0; 
+  double prev_avg2 = 0; 
+
 
   while(1){
 
@@ -352,43 +339,54 @@ void* reporting_thread(void *arg){
     }
 
 
-   if(report_count % 10 == 0){
+    if(report_count % 10 == 0){
       
       //INCOMING REPORT
 
-    struct timespec current;
+      struct timespec current;
 
-    if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
-      fprintf(stderr, "%s", "clock_gettime error");
-      exit(1);
-    }  
-
-      // puts("");
-      // printf("CURRENT SYSTEM TIME (nsec+sec): %ld\n", (current.tv_nsec + current.tv_sec));
-
-      // printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
-      // printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
-
-      // printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
-      // printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
-      // printf("TOTAL: %d\n", report_count);
+      if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
+        fprintf(stderr, "%s", "clock_gettime error");
+        exit(1);
+      }  
 
       double avg = calc_average(sigusr1_differences); 
+
+      if(prev_avg1 == 0){
+        prev_avg1 = avg;
+      }
+
+      avg_avg1 = (prev_avg1 + avg) / 2.0;
+
+
       //printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
 
       double avg2 = calc_average(sigusr2_differences); 
       //printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
 
-      fptr = fopen("data2.log", "a+");
+      if(prev_avg2 == 0){
+        prev_avg2 = avg2; 
+      }
+
+      if(avg2 == 0)
+        avg2 = prev_avg2;
+
+      avg_avg2 = (prev_avg2 + avg2) / 2.0;
+
+      
+
+      fptr = fopen("t_data.log", "a+");
       fprintf(fptr, "\n");
+      fprintf(fptr, "%s%ld\n", "CURRENT SYSTEM TIME (nsec+sec): ", (current.tv_nsec + current.tv_sec));
       fprintf(fptr, "%s%d\n", "SIGUSR1 S: ", sigusr1_sent_counter);
       fprintf(fptr, "%s%d\n", "SIGUSR2 S: ", sigusr2_sent_counter);
       fprintf(fptr, "%s%d\n", "SIGUSR1 R: ", sigusr1_received_counter);
       fprintf(fptr, "%s%d\n", "SIGUSR2 R: ", sigusr2_received_counter);
-      fprintf(fptr, "%s%d\n", "REPORT SEND COUNT: ", report_count);
-      fprintf(fptr, "%s%lf%s\n", "SIGUSR1 avg time between receptions: ", avg, "SECONDS");
-      fprintf(fptr, "%s%lf%s\n", "SIGUSR2 avg time between receptions: ", avg2, "SECONDS");
-
+      fprintf(fptr, "%s%d\n", "REPORT RECEIVED COUNT: ", report_count);
+      fprintf(fptr, "%s%lf%s\n", "SIGUSR1 avg time between receptions (any 10): ", avg, " SECONDS");
+      fprintf(fptr, "%s%lf%s\n", "SIGUSR2 avg time between receptions (any 10): ", avg2, " SECONDS");
+      //  fprintf(fptr, "%s%lf%s\n", "SIGUSR1 avgerage of averages: ", avg_avg1, " SECONDS");
+      //  fprintf(fptr, "%s%lf%s\n", "SIGUSR2 avgerage averages: ", avg_avg2, " SECONDS");
       fclose(fptr);
 
       // reset 
@@ -396,7 +394,11 @@ void* reporting_thread(void *arg){
       sigusr2_index_differences = 0; 
       memset(sigusr1_differences, 0, sizeof(sigusr1_differences)); 
       memset(sigusr2_differences, 0, sizeof(sigusr2_differences)); 
+
+      if(report_count == 10000)
+        apple = 0; 
     }
+
 
   }
 
@@ -428,14 +430,6 @@ void sleep_random_interval(double low, double high){
     puts("nanosleep error");
     exit(1);
   }
-
-  // clock_gettime(CLOCK_MONOTONIC, &stop);
-
-  // double difference = (stop.tv_sec - start.tv_sec) * 1e9; 
-  // difference = (difference + (stop.tv_nsec - start.tv_nsec)) * 1e-9; 
-
-  // printf("DIFF: %lf\n", difference);
-
 
 }
 
