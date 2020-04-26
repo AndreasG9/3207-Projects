@@ -16,24 +16,24 @@ signaling_MT.c - Signaling with multi-threads
 #include <stdbool.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/time.h>
 #include <assert.h> 
 #include <sys/types.h>
+#include <string.h>
 #define NUM_THREADS 8
 
 void* generating_thread(void* arg);
 void* signal_handling_sigusr1(void *arg);
 void* signal_handling_sigusr2(void *arg);
 void* reporting_thread(void *arg);
-
-
 void sleep_random_interval(double low, double high); 
 int random_signal(); 
-
 void block_both();
 void block_signal(int signal);
+double calc_average(double diff[10]);
 
-int sigusr1_recieved_counter; 
-int sigusr2_recieved_counter; 
+int sigusr1_received_counter; 
+int sigusr2_received_counter; 
 int sigusr1_sent_counter; 
 int sigusr2_sent_counter;  
 
@@ -49,8 +49,8 @@ int main (int argc, char *argv[]){
   // INIT 
   sigusr1_sent_counter = 0;
   sigusr2_sent_counter = 0; 
-  sigusr1_recieved_counter = 0;
-  sigusr2_recieved_counter = 0; 
+  sigusr1_received_counter = 0;
+  sigusr2_received_counter = 0; 
 
 
   int res = pthread_mutex_init(&lock_sigusr1_sent, NULL);
@@ -65,8 +65,6 @@ int main (int argc, char *argv[]){
 
 
   // create threads 
-  // pthread_t threads[NUM_THREADS];
-
   for(int i = 0; i<NUM_THREADS; ++i){
 
     if(i == 0 || i == 1){
@@ -103,29 +101,40 @@ int main (int argc, char *argv[]){
 
   }
 
-    //block_both(); // "PARENT"/ main thread, block both usr SIGNALS 
-
   puts("main thread");
   block_both();
 
-  // sigset_t sigset; 
-  // sigemptyset(&sigset); 
-  // sigaddset(&sigset, SIGUSR1);
-  // sigaddset(&sigset, SIGUSR2);
-  // pthread_sigmask(SIG_BLOCK, &sigset, NULL);
+  while(1){
+    // run program, until ENTER 
+      
+    if(getchar())
+      break; 
+  }
 
-    // while(1){
+    
+      //  printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
+      //  printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
 
-    //   if(getchar())
-    //     break; 
-    // }
+      //  printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
+      //  printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
 
-    while(1){
-      sleep(1);
+      // printf("TOTAL SENT: %d\n", sigusr1_sent_counter + sigusr2_sent_counter);
+      // printf("TOTAL R: %d\n", sigusr1_received_counter + sigusr2_received_counter);
+
+      // if((sigusr1_sent_counter + sigusr2_sent_counter) * 2 != (sigusr1_received_counter + sigusr2_received_counter)){
+      //   puts("SHIEEEEEEEEEEEEEEEET");
+      // }
+
+      
+
+    // kill threads
+    for(int i = 0; i<8; ++i){
+    // signal all child, handler will detach from shared memory region and exit(0)
+      pthread_kill(threads[i], SIGTERM); 
     }
 
-}
 
+}
 
 void* generating_thread(void* arg){
 
@@ -133,48 +142,63 @@ void* generating_thread(void* arg){
 
   int j = 0; 
 
-  while(j<2){
-    ++j; 
+  while(1){
     
     sleep_random_interval(.01, .1); // sleep [.01-.1] 
 
     int signal = random_signal(); 
-   // printf("SENT SIGNAL: %d\n", signal);
 
-    signal = 1; 
+     for(int i =0; i<NUM_THREADS; ++i)
+        pthread_kill(threads[i], signal);
+
+      if(signal == SIGUSR1){
+       // safely increment counter for sigusr1 sent 
+       pthread_mutex_lock(&lock_sigusr1_sent); 
+       ++sigusr1_sent_counter;
+       pthread_mutex_unlock(&lock_sigusr1_sent);
+
+       //printf("SIG1 S: %d\n", sigusr1_sent_counter);
+      }  
+      else{
+        // safely increment counter for sigusr2 sent 
+        pthread_mutex_lock(&lock_sigusr2_sent); 
+        ++sigusr2_sent_counter;
+        pthread_mutex_unlock(&lock_sigusr2_sent);
+
+        //printf("SIG2 S: %d\n", sigusr2_sent_counter);
+      }
+
 
     // send the signal to ALL other threads (to mirror processes approach)
-    if(signal == 1){
+  //   if(signal == 1){
       
-      for(int i =0; i<NUM_THREADS; ++i)
-        pthread_kill(threads[i], SIGUSR1);  
+  //     for(int i =0; i<NUM_THREADS; ++i)
+  //       pthread_kill(threads[i], SIGUSR1);  
 
+  //     // safely increment counter for sigusr1 sent 
+  //     pthread_mutex_lock(&lock_sigusr1_sent); 
+  //     ++sigusr1_sent_counter;
+  //     pthread_mutex_unlock(&lock_sigusr1_sent);
 
-      // safely increment counter for sigusr1 sent 
-      pthread_mutex_lock(&lock_sigusr1_sent); 
-      ++sigusr1_sent_counter;
-      pthread_mutex_unlock(&lock_sigusr1_sent);
+  //     //printf("SIG1 S: %d\n", sigusr1_sent_counter);
+  //   }
 
-      //printf("SIG1 S: %d\n", sigusr1_sent_counter);
-    }
+  //   else{
+  //     // send SIGUSR2
 
-    else{
-      // send SIGUSR2
+  //     for(int i =0; i<NUM_THREADS; ++i)
+  //       pthread_kill(threads[i],SIGUSR2);
 
-      for(int i =0; i<NUM_THREADS; ++i)
-        pthread_kill(threads[i],SIGUSR2);
+  //     //safely increment counter for sigusr1 sent 
+  //     pthread_mutex_lock(&lock_sigusr2_sent); 
+  //     ++sigusr2_sent_counter;
+  //     pthread_mutex_unlock(&lock_sigusr2_sent);
 
-      //safely increment counter for sigusr1 sent 
-      pthread_mutex_lock(&lock_sigusr2_sent); 
-      ++sigusr2_sent_counter;
-      pthread_mutex_unlock(&lock_sigusr2_sent);
+  //     //printf("SIG2 S: %d\n", sigusr2_sent_counter);
+  //   }
 
-      //printf("SIG2 S: %d\n", sigusr2_sent_counter);
-    }
 
   }
-
-
 
 
 }
@@ -199,15 +223,13 @@ void* signal_handling_sigusr1(void *arg){
 	    // received signal, increment count 
 
       pthread_mutex_lock(&lock_sigusr1_received); 
-      ++sigusr1_recieved_counter; 
+      ++sigusr1_received_counter; 
       pthread_mutex_unlock(&lock_sigusr1_received);
 
       //printf("SIG1 R: %d\n", sigusr1_recieved_counter);
 	  }
 
   }
-
-
 
 }
 
@@ -224,24 +246,17 @@ void* signal_handling_sigusr2(void *arg){
   int signal;
 
   while (1){
-
-	  retval  = sigwait(&sigset, &signal);
+	  retval  = sigwait(&sigset, &signal); 
 
 	  if(signal == SIGUSR2){
       // received signal, increment count 
 
       pthread_mutex_lock(&lock_sigusr2_received); 
-      ++sigusr2_recieved_counter; 
+      ++sigusr2_received_counter; 
       pthread_mutex_unlock(&lock_sigusr2_received);
 
       //printf("SIG2 R: %d\n", sigusr2_recieved_counter);
 	  }
-
-  }
-
-
-  while(1){
-    sleep(1);
   }
 
 }
@@ -264,12 +279,12 @@ void* reporting_thread(void *arg){
   int report_sig1= 0;
   int report_sig2 = 0; 
 
-  
   double sigusr1_differences[10]; 
   double sigusr2_differences[10]; 
   int sigusr1_index_differences = 0; 
   int sigusr2_index_differences = 0; 
 
+  clock_t prev; 
 
   while(1){
 
@@ -278,21 +293,16 @@ void* reporting_thread(void *arg){
 
     struct timespec current;
 
-    // if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
-    //   fprintf(stderr, "%s", "clock_gettime error");
-    //   exit(1);
-    // }
-
-  //  printf("CURRENT: %ld\n", current.tv_nsec);
-
-	  if(signal == SIGUSR1){
-      // received signal, increment count 
-      //puts("SIGUSR1 test");
-
     if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
       fprintf(stderr, "%s", "clock_gettime error");
       exit(1);
     }
+
+
+	  if(signal == SIGUSR1){
+      // received signal, increment count 
+      // store diff (prev time, current time)
+      // set prev time to current time 
 
       ++report_sig1;
 
@@ -303,21 +313,21 @@ void* reporting_thread(void *arg){
         continue;
       }
 
-     // printf("START: %ld\n", prev_sigusr1.tv_nsec);
-     // printf("STOP %ld\n", current.tv_nsec); 
+
+      //printf("CURRENT: %ld\n", current.tv_nsec + current.tv_sec);
 
       double difference = (current.tv_sec - prev_sigusr1.tv_sec) * 1e9; 
-      difference = (difference + (current.tv_nsec - prev_sigusr1.tv_nsec)) * 1e-9; 
+      difference =  (difference + (current.tv_nsec - prev_sigusr1.tv_nsec)) * 1e-9; // in SECONDS 
 
       sigusr1_differences[sigusr1_index_differences] = difference; 
 
-     // printf("sig 1 diff: %lf\n",  sigusr1_differences[sigusr1_index_differences]);
+      //printf("sig 1 diff: %lf\n",  sigusr1_differences[sigusr1_index_differences]);
 
+      // store time last occurance 
       prev_sigusr1.tv_nsec = current.tv_nsec; 
       prev_sigusr1.tv_sec = current.tv_sec;
 
-      ++sigusr1_index_differences;
-      
+      ++sigusr1_index_differences; 
 	  }
 
     else if (signal == SIGUSR2){
@@ -337,7 +347,7 @@ void* reporting_thread(void *arg){
 
       sigusr2_differences[sigusr2_index_differences] = difference; 
 
-      printf("sig 2 diff: %lf\n",  sigusr2_differences[sigusr2_index_differences]);
+     // printf("sig 2 diff: %lf\n",  sigusr2_differences[sigusr2_index_differences]);
 
       prev_sigusr2.tv_nsec = current.tv_nsec; 
       prev_sigusr2.tv_sec = current.tv_sec;
@@ -346,19 +356,43 @@ void* reporting_thread(void *arg){
     }
 
 
-    if(report_count % 10 == 0){
-      // INCOMING REPORT
+   if(report_count % 10 == 0){
+      
+      //INCOMING REPORT
 
-    // struct timespec current;
+    struct timespec current;
 
-    // if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
-    //   fprintf(stderr, "%s", "clock_gettime error");
-    //   exit(1);
-    // }
+    if(clock_gettime( CLOCK_MONOTONIC, &current) == -1 ){
+      fprintf(stderr, "%s", "clock_gettime error");
+      exit(1);
+    }  
 
+      puts("");
+      printf("CURRENT SYSTEM TIME (nsec+sec): %ld\n", (current.tv_nsec + current.tv_sec));
+
+      printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
+      printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
+
+      printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
+      printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
+
+
+       printf("TOTAL: %d\n", report_count);
+
+      double avg; 
+
+      avg = calc_average(sigusr1_differences); 
+      printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
+
+      avg = calc_average(sigusr2_differences); 
+      printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
+
+      // reset 
+      sigusr1_index_differences = 0; 
+      sigusr2_index_differences = 0; 
+      memset(sigusr1_differences, 0, sizeof(sigusr1_differences)); 
+      memset(sigusr2_differences, 0, sizeof(sigusr2_differences)); 
     }
-
-    //printf("TOTAL COUNT%d\n", report_count);
 
   }
 
@@ -410,9 +444,9 @@ int random_signal(){
   int random_int = (rand() % 2) + 1; // [1-2]
 
   if(random_int == 1)
-    return 1; 
+    return SIGUSR1; 
   else
-    return 2; 
+    return SIGUSR2; 
 }
 
 void block_both(){
@@ -434,6 +468,30 @@ void block_signal(int signal){
   sigaddset(&sigset, signal);
 
   pthread_sigmask(SIG_BLOCK, &sigset, NULL);
+}
+
+double calc_average(double diff[10]){
+  // calc. avg based on diffs in sigusr1_differences[10] and sigusr2_diferences[10]
+
+  int j = 0;
+  double sum = 0; 
+  double avg; 
+
+  while(diff[j]){
+    sum += diff[j];
+    ++j; 
+  }
+
+  if(sum == 0){
+    // possible recent 10 signals, this recieved none (does happen, occasionally)
+    avg = 0; 
+  }
+  else{
+    avg = (sum / j); 
+  }
+
+  return avg; 
+
 }
 
 
