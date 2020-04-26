@@ -101,8 +101,12 @@ int main (int argc, char *argv[]){
 
   }
 
-  puts("main thread");
+  //puts("main thread");
   block_both();
+
+  puts("currently running ... ");
+  puts("\n*************'ENTER' to stop program execution******************\n");
+  puts("\n*************'ENTER' to stop program execution******************\n");
 
   while(1){
     // run program, until ENTER 
@@ -111,27 +115,13 @@ int main (int argc, char *argv[]){
       break; 
   }
 
-    
-      //  printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
-      //  printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
+  
+  puts("SEE DATA2.LOG for REPORTS\n");
 
-      //  printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
-      //  printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
-
-      // printf("TOTAL SENT: %d\n", sigusr1_sent_counter + sigusr2_sent_counter);
-      // printf("TOTAL R: %d\n", sigusr1_received_counter + sigusr2_received_counter);
-
-      // if((sigusr1_sent_counter + sigusr2_sent_counter) * 2 != (sigusr1_received_counter + sigusr2_received_counter)){
-      //   puts("SHIEEEEEEEEEEEEEEEET");
-      // }
-
-      
-
-    // kill threads
-    for(int i = 0; i<8; ++i){
-    // signal all child, handler will detach from shared memory region and exit(0)
-      pthread_kill(threads[i], SIGTERM); 
-    }
+  for(int i = 0; i<8; ++i){
+  // kill threads 
+    pthread_kill(threads[i], SIGTERM); 
+  }
 
 
 }
@@ -148,8 +138,12 @@ void* generating_thread(void* arg){
 
     int signal = random_signal(); 
 
-     for(int i =0; i<NUM_THREADS; ++i)
+     for(int i =0; i<NUM_THREADS; ++i){
         pthread_kill(threads[i], signal);
+
+        if(signal == 0)
+          puts("signal not sent");
+       }
 
       if(signal == SIGUSR1){
        // safely increment counter for sigusr1 sent 
@@ -272,6 +266,8 @@ void* reporting_thread(void *arg){
   int retval = 0;
   int signal;
   int report_count = 0; 
+  FILE *fptr = fopen("data2.log", "w");
+  fclose(fptr);
 
   struct timespec prev_sigusr1;
   struct timespec prev_sigusr2;
@@ -367,25 +363,33 @@ void* reporting_thread(void *arg){
       exit(1);
     }  
 
-      puts("");
-      printf("CURRENT SYSTEM TIME (nsec+sec): %ld\n", (current.tv_nsec + current.tv_sec));
+      // puts("");
+      // printf("CURRENT SYSTEM TIME (nsec+sec): %ld\n", (current.tv_nsec + current.tv_sec));
 
-      printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
-      printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
+      // printf("SIGUSR1 S: %d\n", sigusr1_sent_counter);
+      // printf("SIGUSR2 S: %d\n", sigusr2_sent_counter);
 
-      printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
-      printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
+      // printf("SIGUSR1 R: %d\n", sigusr1_received_counter);
+      // printf("SIGUSR2 R: %d\n", sigusr2_received_counter);
+      // printf("TOTAL: %d\n", report_count);
 
+      double avg = calc_average(sigusr1_differences); 
+      //printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
 
-       printf("TOTAL: %d\n", report_count);
+      double avg2 = calc_average(sigusr2_differences); 
+      //printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
 
-      double avg; 
+      fptr = fopen("data2.log", "a+");
+      fprintf(fptr, "\n");
+      fprintf(fptr, "%s%d\n", "SIGUSR1 S: ", sigusr1_sent_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR2 S: ", sigusr2_sent_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR1 R: ", sigusr1_received_counter);
+      fprintf(fptr, "%s%d\n", "SIGUSR2 R: ", sigusr2_received_counter);
+      fprintf(fptr, "%s%d\n", "REPORT SEND COUNT: ", report_count);
+      fprintf(fptr, "%s%lf%s\n", "SIGUSR1 avg time between receptions: ", avg, "SECONDS");
+      fprintf(fptr, "%s%lf%s\n", "SIGUSR2 avg time between receptions: ", avg2, "SECONDS");
 
-      avg = calc_average(sigusr1_differences); 
-      printf("SIGUSR1 avg time between receptions: %lf SECONDS\n", avg);
-
-      avg = calc_average(sigusr2_differences); 
-      printf("SIGUSR2 avg time between receptions: %lf SECONDS\n", avg);
+      fclose(fptr);
 
       // reset 
       sigusr1_index_differences = 0; 
@@ -486,12 +490,12 @@ double calc_average(double diff[10]){
     // possible recent 10 signals, this recieved none (does happen, occasionally)
     avg = 0; 
   }
+
   else{
     avg = (sum / j); 
   }
 
   return avg; 
-
 }
 
 
